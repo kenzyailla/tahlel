@@ -1095,7 +1095,25 @@ function filterLinks() {
         }
     });
 }
+// في دالة loadDataFromStorage()
+function loadDataFromStorage() {
+    const savedCertificates = localStorage.getItem('chemicalCertificates');
+    const savedLinks = localStorage.getItem('usefulLinks');
 
+    if (!savedCertificates || JSON.parse(savedCertificates).length === 0) {
+        // بيانات افتراضية تظهر للجميع
+        certificates = [
+            // الشهادات الخمس هنا
+        ];
+        saveDataToStorage();
+    } else {
+        certificates = JSON.parse(savedCertificates);
+    }
+    
+    if (savedLinks) {
+        links = JSON.parse(savedLinks);
+    }
+}
 
     </script>
 </body>
