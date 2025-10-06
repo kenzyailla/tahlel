@@ -231,12 +231,15 @@ let links = [];
 
 // عند تحميل الصفحة
 document.addEventListener('DOMContentLoaded', () => {
+    // التحقق أولاً إذا كنا في وضع عرض الشهادة
+    if (checkIfViewingCertificate()) {
+        return; // توقف عن تحميل النظام العادي
+    }
+    
+    // إذا لم نكن في وضع العرض، حمّل النظام العادي
     loadDataFromStorage();
     renderCertificates();
     renderLinks();
-    
-    // التحقق إذا كنا في وضع عرض الصورة
-    checkIfViewingCertificate();
 });
 
 // تحميل مكتبة QR Code بشكل آمن
@@ -255,46 +258,66 @@ function loadQRCodeLibrary() {
     });
 }
 
-// التحقق إذا كنا في وضع عرض الصورة
+// التحقق إذا كنا في وضع عرض الشهادة
 function checkIfViewingCertificate() {
     const urlParams = new URLSearchParams(window.location.search);
     const viewCert = urlParams.get('view_certificate');
     
     if (viewCert) {
         showCertificateFromQR(viewCert);
+        return true;
     }
+    return false;
 }
 
 // عرض الشهادة من QR Code
 function showCertificateFromQR(certificateId) {
+    // محاولة تحميل البيانات من localStorage أولاً
+    loadDataFromStorage();
+    
     const certificate = certificates.find(c => c.id == certificateId);
+    
     if (certificate && certificate.image) {
         // إخفاء كل شيء وإظهار الصورة فقط
         document.body.innerHTML = `
             <div style="text-align:center; padding:20px; background:linear-gradient(135deg,#667eea 0%,#764ba2 100%); min-height:100vh; display:flex; flex-direction:column; justify-content:center; align-items:center;">
-                <div style="background:white; padding:30px; border-radius:15px; box-shadow:0 20px 40px rgba(0,0,0,0.3); max-width:90%;">
-                    <h1 style="color:#8e44ad; margin-bottom:20px; font-size:2rem;">${certificate.name}</h1>
-                    <img src="${certificate.image}" style="max-width:100%; max-height:70vh; border-radius:10px; box-shadow:0 10px 30px rgba(0,0,0,0.2);">
-                    ${certificate.description ? `<p style="margin-top:20px; color:#666; font-size:1.2rem;">${certificate.description}</p>` : ''}
-                    <p style="margin-top:20px; color:#999;">شهادة تحليل كيماوية</p>
-                    <button onclick="window.location.href = '${window.location.href.split('?')[0]}'" style="margin-top:30px; padding:12px 30px; background:#8e44ad; color:white; border:none; border-radius:8px; cursor:pointer; font-size:16px; transition:all 0.3s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+                <div style="background:white; padding:30px; border-radius:15px; box-shadow:0 20px 40px rgba(0,0,0,0.3); max-width:95%; max-height:95vh; overflow:auto;">
+                    <h1 style="color:#8e44ad; margin-bottom:20px; font-size:1.8rem; word-wrap:break-word;">${certificate.name}</h1>
+                    <img src="${certificate.image}" style="max-width:100%; max-height:60vh; border-radius:10px; box-shadow:0 10px 30px rgba(0,0,0,0.2);">
+                    ${certificate.description ? `<p style="margin-top:20px; color:#666; font-size:1.1rem; word-wrap:break-word;">${certificate.description}</p>` : ''}
+                    <p style="margin-top:20px; color:#999; font-size:0.9rem;">شهادة تحليل كيماوية</p>
+                    <button onclick="goBackToSystem()" style="margin-top:30px; padding:12px 30px; background:#8e44ad; color:white; border:none; border-radius:8px; cursor:pointer; font-size:16px; transition:all 0.3s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
                         العودة إلى النظام
                     </button>
                 </div>
             </div>
         `;
     } else {
+        // إذا لم توجد الشهادة، اعرض رسالة خطأ
         document.body.innerHTML = `
-            <div style="text-align:center; padding:50px; background:white; min-height:100vh; display:flex; flex-direction:column; justify-content:center; align-items:center;">
-                <i class="fas fa-exclamation-triangle" style="font-size:4rem; color:#f39c12; margin-bottom:20px;"></i>
-                <h1 style="color:#e74c3c; margin-bottom:20px;">الشهادة غير موجودة</h1>
-                <p style="color:#666; margin-bottom:30px;">لم يتم العثور على الشهادة المطلوبة</p>
-                <button onclick="window.location.href = '${window.location.href.split('?')[0]}'" style="padding:12px 30px; background:#3498db; color:white; border:none; border-radius:8px; cursor:pointer; font-size:16px;">
-                    العودة إلى النظام
-                </button>
+            <div style="text-align:center; padding:50px; background:linear-gradient(135deg,#667eea 0%,#764ba2 100%); min-height:100vh; display:flex; flex-direction:column; justify-content:center; align-items:center;">
+                <div style="background:white; padding:40px; border-radius:15px; box-shadow:0 20px 40px rgba(0,0,0,0.3);">
+                    <i class="fas fa-exclamation-triangle" style="font-size:4rem; color:#f39c12; margin-bottom:20px;"></i>
+                    <h1 style="color:#e74c3c; margin-bottom:20px;">الشهادة غير موجودة</h1>
+                    <p style="color:#666; margin-bottom:20px; max-width:400px;">لم يتم العثور على الشهادة المطلوبة. قد تكون السباب:</p>
+                    <ul style="color:#666; text-align:right; margin-bottom:30px; max-width:400px;">
+                        <li>تم حذف الشهادة</li>
+                        <li>استخدمت متصفح مختلف</li>
+                        <li>مسحت بيانات المتصفح</li>
+                    </ul>
+                    <button onclick="goBackToSystem()" style="padding:12px 30px; background:#3498db; color:white; border:none; border-radius:8px; cursor:pointer; font-size:16px;">
+                        العودة إلى النظام
+                    </button>
+                </div>
             </div>
         `;
     }
+}
+
+// العودة إلى النظام الرئيسي
+function goBackToSystem() {
+    const baseUrl = window.location.href.split('?')[0];
+    window.location.href = baseUrl;
 }
 
 // التبديل بين التبويبات
@@ -321,7 +344,7 @@ function loadDataFromStorage() {
 
 // إنشاء رابط لعرض الشهادة
 function createCertificateViewUrl(certificateId) {
-    const currentUrl = window.location.href.split('?')[0]; // إزالة أي معلمات حالية
+    const currentUrl = window.location.href.split('?')[0];
     return `${currentUrl}?view_certificate=${certificateId}`;
 }
 
@@ -344,7 +367,7 @@ async function renderCertificates() {
                         <div class="loading">جاري إنشاء QR Code...</div>
                     </div>
                     <p style="margin:10px 0;font-size:12px;color:#666;">QR Code لعرض الشهادة</p>
-                    <small style="color:#999;">عند المسح، ستظهر الصورة مباشرة</small>
+                    <small style="color:#999;">يجب أن تكون في نفس المتصفح لرؤية الصورة</small>
                 </div>
             ` : ''}
             <div class="item-actions">
@@ -516,7 +539,6 @@ function generateSimpleQRCode(containerId, data, title) {
     
     let qrData = data;
     if (containerId.includes('certificate')) {
-        // للشهادات، ننشئ رابطاً حقيقياً
         const certificateId = containerId.replace('qrcode-certificate-', '');
         qrData = createCertificateViewUrl(certificateId);
     }
@@ -596,7 +618,8 @@ function shareCertificate(id) {
     
     if (certificate.image) {
         message += `\n📷 *تحتوي على صورة الشهادة*`;
-        message += `\n\nيمكنك مسح QR Code أو زيارة الرابط:\n${certificateUrl}`;
+        message += `\n\nلرؤية الصورة، يرجى مسح QR Code أو زيارة الرابط:\n${certificateUrl}`;
+        message += `\n\n*ملاحظة:* يجب أن تكون في نفس المتصفح الذي تم إنشاء الشهادة فيه`;
     }
     
     message += `\n\n---\nتم إنشاء الشهادة عبر نظام إدارة شهادات التحليل`;
