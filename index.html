@@ -58,6 +58,7 @@
         .btn-info{background:linear-gradient(to right,#2196f3,#1976d2);color:#fff;}
         .btn-danger{background:linear-gradient(to right,#f44336,#d32f2f);color:#fff;}
         .btn-whatsapp{background:linear-gradient(to right,#25D366,#128C7E);color:#fff;}
+        .btn-warning{background:linear-gradient(to right,#ff9800,#f57c00);color:#fff;}
         .btn:hover{transform:translateY(-2px);box-shadow:0 5px 15px rgba(0,0,0,0.2);}
         
         .items-container{display:grid;grid-template-columns:repeat(auto-fill,minmax(400px,1fr));gap:20px;margin-top:20px;}
@@ -137,12 +138,35 @@
             margin: 10px 0;
             border-right: 4px solid #8e44ad;
         }
+
+        .download-section {
+            background: #e8f5e8;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            border-right: 4px solid #4caf50;
+        }
+
+        .certificate-preview {
+            max-width: 300px;
+            max-height: 200px;
+            border-radius: 10px;
+            margin: 15px auto;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+            border: 2px solid #8e44ad;
+        }
         
         @media(max-width:768px){
             .items-container{grid-template-columns:1fr}
             .controls{flex-direction:column}
             .item-actions{flex-direction:column}
             .modal-content{width:95%;padding:20px;}
+        }
+
+        @media print {
+            .no-print { display: none !important; }
+            body { background: white !important; }
+            .certificate-preview { max-width: 100% !important; max-height: none !important; }
         }
     </style>
 </head>
@@ -272,21 +296,30 @@ function checkIfViewingCertificateFromURL() {
     
     const certName = urlParams.get('name');
     const certDesc = urlParams.get('description');
+    const certImage = urlParams.get('image');
+    const certId = urlParams.get('id');
     
-    if (certName) {
-        showCertificateFromURL(certName, certDesc);
+    if (certName || certId) {
+        showCertificateFromURL(certName, certDesc, certImage, certId);
         return true;
     }
     return false;
 }
 
 // عرض الشهادة من URL
-function showCertificateFromURL(name, description) {
+function showCertificateFromURL(name, description, imageData, certId) {
+    // محاولة العثور على الشهادة الكاملة من localStorage
+    let fullCertificate = null;
+    if (certId) {
+        loadDataFromStorage();
+        fullCertificate = certificates.find(c => c.id == certId);
+    }
+    
     document.body.innerHTML = `
         <div style="text-align:center; padding:20px; background:linear-gradient(135deg,#667eea 0%,#764ba2 100%); min-height:100vh; display:flex; flex-direction:column; justify-content:center; align-items:center;">
             <div style="background:white; padding:40px; border-radius:15px; box-shadow:0 20px 40px rgba(0,0,0,0.3); max-width:90%; max-height:90vh; overflow:auto;">
                 <i class="fas fa-file-certificate" style="font-size:4rem; color:#8e44ad; margin-bottom:20px;"></i>
-                <h1 style="color:#8e44ad; margin-bottom:20px; font-size:2rem; word-wrap:break-word;">${decodeURIComponent(name)}</h1>
+                <h1 style="color:#8e44ad; margin-bottom:20px; font-size:2rem; word-wrap:break-word;">${name ? decodeURIComponent(name) : 'شهادة تحليل'}</h1>
                 
                 ${description ? `
                     <div class="certificate-info">
@@ -295,33 +328,73 @@ function showCertificateFromURL(name, description) {
                     </div>
                 ` : ''}
                 
+                <!-- معاينة الصورة إذا كانت متاحة -->
+                ${fullCertificate && fullCertificate.image ? `
+                    <div style="margin:20px 0;">
+                        <h3 style="color:#2c3e50; margin-bottom:15px;">صورة الشهادة:</h3>
+                        <img src="${fullCertificate.image}" class="certificate-preview" alt="صورة الشهادة">
+                        <div style="margin-top:15px;">
+                            <button onclick="downloadImage('${fullCertificate.image}', '${fullCertificate.name}')" class="btn btn-success" style="margin:5px;">
+                                <i class="fas fa-download"></i> تحميل الصورة
+                            </button>
+                        </div>
+                    </div>
+                ` : `
+                    <div class="download-section">
+                        <h3 style="color:#2e7d32; margin-bottom:15px;">
+                            <i class="fas fa-info-circle"></i> لرؤية الصورة الكاملة:
+                        </h3>
+                        <p style="color:#666; margin-bottom:15px;">
+                            يرجى زيارة النظام الرئيسي من نفس المتصفح الذي تم إنشاء الشهادة فيه
+                        </p>
+                        ${fullCertificate ? `
+                            <button onclick="showOriginalCertificate(${fullCertificate.id})" class="btn btn-warning">
+                                <i class="fas fa-external-link-alt"></i> فتح في النظام الأصلي
+                            </button>
+                        ` : ''}
+                    </div>
+                `}
+                
                 <div style="background:#f8f9fa; padding:20px; border-radius:10px; margin:20px 0; border-right:4px solid #3498db;">
                     <h3 style="color:#2c3e50; margin-bottom:10px;">معلومات الشهادة:</h3>
                     <p style="color:#666; margin:5px 0;">📅 تاريخ الإنشاء: ${new Date().toLocaleDateString('ar-EG')}</p>
                     <p style="color:#666; margin:5px 0;">🏢 نوع المستند: شهادة تحليل كيماوية</p>
                     <p style="color:#666; margin:5px 0;">🔍 الحالة: معتمدة</p>
+                    ${fullCertificate ? `<p style="color:#666; margin:5px 0;">🆔 رقم الشهادة: ${fullCertificate.id}</p>` : ''}
                 </div>
                 
                 <p style="color:#999; margin-top:20px; font-size:0.9rem;">تم إنشاء هذه الشهادة عبر نظام إدارة شهادات التحليل</p>
                 
                 <div style="margin-top:30px; display:flex; gap:15px; justify-content:center; flex-wrap:wrap;">
-                    <button onclick="goBackToSystem()" style="padding:12px 30px; background:#8e44ad; color:white; border:none; border-radius:8px; cursor:pointer; font-size:16px; transition:all 0.3s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+                    <button onclick="goBackToSystem()" class="btn btn-primary">
                         <i class="fas fa-home"></i> العودة إلى النظام
                     </button>
-                    <button onclick="window.print()" style="padding:12px 30px; background:#3498db; color:white; border:none; border-radius:8px; cursor:pointer; font-size:16px; transition:all 0.3s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+                    <button onclick="window.print()" class="btn btn-info">
                         <i class="fas fa-print"></i> طباعة الشهادة
                     </button>
-                </div>
-                
-                <div style="margin-top:30px; padding:15px; background:#e8f5e8; border-radius:8px; border-right:4px solid #4caf50;">
-                    <p style="color:#2e7d32; margin:0; font-size:0.9rem;">
-                        <i class="fas fa-info-circle"></i> 
-                        لرؤية الصورة الكاملة للشهادة، يرجى زيارة النظام الرئيسي من نفس المتصفح
-                    </p>
+                    ${fullCertificate && fullCertificate.image ? `
+                        <button onclick="downloadImage('${fullCertificate.image}', '${fullCertificate.name}')" class="btn btn-success">
+                            <i class="fas fa-download"></i> تحميل الصورة
+                        </button>
+                    ` : ''}
                 </div>
             </div>
         </div>
     `;
+}
+
+// تحميل الصورة
+function downloadImage(imageData, fileName) {
+    const link = document.createElement('a');
+    link.download = `شهادة-${fileName.replace(/\s+/g, '-')}.png`;
+    link.href = imageData;
+    link.click();
+}
+
+// فتح الشهادة في النظام الأصلي
+function showOriginalCertificate(certificateId) {
+    const baseUrl = window.location.href.split('?')[0];
+    window.location.href = baseUrl + '?view_certificate=' + certificateId;
 }
 
 // العودة إلى النظام الرئيسي
@@ -356,10 +429,11 @@ function loadDataFromStorage() {
 function createCertificateViewUrl(certificate) {
     const currentUrl = window.location.href.split('?')[0];
     
-    // إنشاء رابط بسيط يحتوي على المعلومات الأساسية
+    // إنشاء رابط يحتوي على المعلومات الأساسية + ID للعثور على الصورة إذا كانت في نفس المتصفح
     const params = new URLSearchParams({
         name: encodeURIComponent(certificate.name),
-        description: certificate.description ? encodeURIComponent(certificate.description) : ''
+        description: certificate.description ? encodeURIComponent(certificate.description) : '',
+        id: certificate.id
     });
     
     return `${currentUrl}?${params.toString()}`;
@@ -379,6 +453,11 @@ async function renderCertificates() {
             ${c.description ? `<p style="color:#666; margin-bottom:10px;">${c.description}</p>` : ''}
             ${c.image ? `
                 <img src="${c.image}" class="certificate-image" alt="صورة الشهادة" onclick="showImageModal('${c.image}')">
+                <div style="margin:10px 0;">
+                    <button class="btn btn-info" onclick="downloadCertificateImage(${c.id})">
+                        <i class="fas fa-download"></i> تحميل الصورة
+                    </button>
+                </div>
             ` : ''}
             
             <div class="qrcode-container">
@@ -386,7 +465,7 @@ async function renderCertificates() {
                     <div class="loading">جاري إنشاء QR Code...</div>
                 </div>
                 <p style="margin:10px 0;font-size:12px;color:#666;">QR Code لمعلومات الشهادة</p>
-                <small style="color:#999;">عند المسح، ستظهر صفحة بمعلومات الشهادة</small>
+                <small style="color:#999;">عند المسح، ستظهر صفحة بمعلومات الشهادة ${c.image ? 'ومعاينة للصورة' : ''}</small>
             </div>
             
             <div class="item-actions">
@@ -397,8 +476,8 @@ async function renderCertificates() {
                     <i class="fas fa-download"></i> حفظ QR
                 </button>
                 ${c.image ? `
-                    <button class="btn btn-info" onclick="downloadCertificateImage(${c.id})">
-                        <i class="fas fa-download"></i> تحميل الصورة
+                    <button class="btn btn-warning" onclick="showImageModal('${c.image}')">
+                        <i class="fas fa-eye"></i> معاينة الصورة
                     </button>
                 ` : ''}
                 <button class="btn btn-danger" onclick="deleteCertificate(${c.id})">
@@ -423,6 +502,9 @@ async function renderCertificates() {
         }
     }, 500);
 }
+
+// باقي الدوال تبقى كما هي...
+// [يتبع باقي الكود السابق بدون تغيير]
 
 // عرض الروابط مع QR Code
 async function renderLinks() {
@@ -610,7 +692,7 @@ function downloadCertificateImage(id) {
     const certificate = certificates.find(c => c.id === id);
     if (certificate && certificate.image) {
         const link = document.createElement('a');
-        link.download = `certificate-${certificate.name.replace(/\s+/g, '-')}.png`;
+        link.download = `شهادة-${certificate.name.replace(/\s+/g, '-')}.png`;
         link.href = certificate.image;
         link.click();
     }
@@ -631,7 +713,12 @@ function shareCertificate(id) {
     }
     
     message += `\n🔗 *رابط الشهادة:*\n${certificateUrl}`;
-    message += `\n\n📱 *مسح QR Code:*\nيمكنك مسح QR Code لعرض معلومات الشهادة`;
+    
+    if (certificate.image) {
+        message += `\n\n📷 *تحتوي على صورة الشهادة*`;
+        message += `\nيمكنك تحميل الصورة من الرابط أعلاه`;
+    }
+    
     message += `\n\n---\nتم إنشاء الشهادة عبر نظام إدارة شهادات التحليل`;
     
     const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
