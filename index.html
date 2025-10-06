@@ -129,6 +129,14 @@
             font-size: 14px;
             padding: 20px;
         }
+
+        .certificate-info {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 10px 0;
+            border-right: 4px solid #8e44ad;
+        }
         
         @media(max-width:768px){
             .items-container{grid-template-columns:1fr}
@@ -262,75 +270,55 @@ function loadQRCodeLibrary() {
 function checkIfViewingCertificateFromURL() {
     const urlParams = new URLSearchParams(window.location.search);
     
-    // التحقق من جميع المعلمات الممكنة
-    const viewCert = urlParams.get('view_certificate') || 
-                    urlParams.get('certificate') || 
-                    urlParams.get('id') ||
-                    urlParams.get('cert');
+    const certName = urlParams.get('name');
+    const certDesc = urlParams.get('description');
     
-    if (viewCert) {
-        showCertificateFromURL(viewCert);
+    if (certName) {
+        showCertificateFromURL(certName, certDesc);
         return true;
     }
     return false;
 }
 
 // عرض الشهادة من URL
-function showCertificateFromURL(certificateData) {
-    // محاولة فك تشفير البيانات من URL
-    try {
-        let certificate;
-        
-        // إذا كانت البيانات مشفرة base64
-        if (certificateData.includes('.')) {
-            const decodedData = atob(certificateData);
-            certificate = JSON.parse(decodedData);
-        } else {
-            // إذا كانت مجرد ID، حاول العثور عليها في localStorage
-            loadDataFromStorage();
-            certificate = certificates.find(c => c.id == certificateData);
-        }
-        
-        if (certificate && certificate.image) {
-            showCertificatePage(certificate);
-        } else {
-            showCertificateNotFound();
-        }
-    } catch (error) {
-        console.error('Error decoding certificate:', error);
-        showCertificateNotFound();
-    }
-}
-
-// عرض صفحة الشهادة
-function showCertificatePage(certificate) {
+function showCertificateFromURL(name, description) {
     document.body.innerHTML = `
         <div style="text-align:center; padding:20px; background:linear-gradient(135deg,#667eea 0%,#764ba2 100%); min-height:100vh; display:flex; flex-direction:column; justify-content:center; align-items:center;">
-            <div style="background:white; padding:30px; border-radius:15px; box-shadow:0 20px 40px rgba(0,0,0,0.3); max-width:95%; max-height:95vh; overflow:auto;">
-                <h1 style="color:#8e44ad; margin-bottom:20px; font-size:1.8rem; word-wrap:break-word;">${certificate.name}</h1>
-                <img src="${certificate.image}" style="max-width:100%; max-height:60vh; border-radius:10px; box-shadow:0 10px 30px rgba(0,0,0,0.2);">
-                ${certificate.description ? `<p style="margin-top:20px; color:#666; font-size:1.1rem; word-wrap:break-word;">${certificate.description}</p>` : ''}
-                <p style="margin-top:20px; color:#999; font-size:0.9rem;">شهادة تحليل كيماوية</p>
-                <button onclick="goBackToSystem()" style="margin-top:30px; padding:12px 30px; background:#8e44ad; color:white; border:none; border-radius:8px; cursor:pointer; font-size:16px; transition:all 0.3s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
-                    العودة إلى النظام
-                </button>
-            </div>
-        </div>
-    `;
-}
-
-// عرض رسالة الشهادة غير موجودة
-function showCertificateNotFound() {
-    document.body.innerHTML = `
-        <div style="text-align:center; padding:50px; background:linear-gradient(135deg,#667eea 0%,#764ba2 100%); min-height:100vh; display:flex; flex-direction:column; justify-content:center; align-items:center;">
-            <div style="background:white; padding:40px; border-radius:15px; box-shadow:0 20px 40px rgba(0,0,0,0.3);">
-                <i class="fas fa-exclamation-triangle" style="font-size:4rem; color:#f39c12; margin-bottom:20px;"></i>
-                <h1 style="color:#e74c3c; margin-bottom:20px;">الشهادة غير موجودة</h1>
-                <p style="color:#666; margin-bottom:20px; max-width:400px;">لم يتم العثور على الشهادة المطلوبة.</p>
-                <p style="color:#666; margin-bottom:30px; max-width:400px;">هذا النظام يستخدم التخزين المحلي، لذا الشهادات تعمل فقط في المتصفح الذي تم إنشاؤها فيه.</p>
-                <button onclick="goBackToSystem()" style="padding:12px 30px; background:#3498db; color:white; border:none; border-radius:8px; cursor:pointer; font-size:16px;">
-                    العودة إلى النظام
-                </button>
+            <div style="background:white; padding:40px; border-radius:15px; box-shadow:0 20px 40px rgba(0,0,0,0.3); max-width:90%; max-height:90vh; overflow:auto;">
+                <i class="fas fa-file-certificate" style="font-size:4rem; color:#8e44ad; margin-bottom:20px;"></i>
+                <h1 style="color:#8e44ad; margin-bottom:20px; font-size:2rem; word-wrap:break-word;">${decodeURIComponent(name)}</h1>
+                
+                ${description ? `
+                    <div class="certificate-info">
+                        <h3 style="color:#2c3e50; margin-bottom:10px;">وصف الشهادة:</h3>
+                        <p style="color:#666; font-size:1.2rem; line-height:1.6;">${decodeURIComponent(description)}</p>
+                    </div>
+                ` : ''}
+                
+                <div style="background:#f8f9fa; padding:20px; border-radius:10px; margin:20px 0; border-right:4px solid #3498db;">
+                    <h3 style="color:#2c3e50; margin-bottom:10px;">معلومات الشهادة:</h3>
+                    <p style="color:#666; margin:5px 0;">📅 تاريخ الإنشاء: ${new Date().toLocaleDateString('ar-EG')}</p>
+                    <p style="color:#666; margin:5px 0;">🏢 نوع المستند: شهادة تحليل كيماوية</p>
+                    <p style="color:#666; margin:5px 0;">🔍 الحالة: معتمدة</p>
+                </div>
+                
+                <p style="color:#999; margin-top:20px; font-size:0.9rem;">تم إنشاء هذه الشهادة عبر نظام إدارة شهادات التحليل</p>
+                
+                <div style="margin-top:30px; display:flex; gap:15px; justify-content:center; flex-wrap:wrap;">
+                    <button onclick="goBackToSystem()" style="padding:12px 30px; background:#8e44ad; color:white; border:none; border-radius:8px; cursor:pointer; font-size:16px; transition:all 0.3s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+                        <i class="fas fa-home"></i> العودة إلى النظام
+                    </button>
+                    <button onclick="window.print()" style="padding:12px 30px; background:#3498db; color:white; border:none; border-radius:8px; cursor:pointer; font-size:16px; transition:all 0.3s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+                        <i class="fas fa-print"></i> طباعة الشهادة
+                    </button>
+                </div>
+                
+                <div style="margin-top:30px; padding:15px; background:#e8f5e8; border-radius:8px; border-right:4px solid #4caf50;">
+                    <p style="color:#2e7d32; margin:0; font-size:0.9rem;">
+                        <i class="fas fa-info-circle"></i> 
+                        لرؤية الصورة الكاملة للشهادة، يرجى زيارة النظام الرئيسي من نفس المتصفح
+                    </p>
+                </div>
             </div>
         </div>
     `;
@@ -364,20 +352,17 @@ function loadDataFromStorage() {
     if (l) links = JSON.parse(l);
 }
 
-// إنشاء رابط لعرض الشهادة (الحل البديل)
+// إنشاء رابط لعرض الشهادة (يعمل عبر جميع المتصفحات)
 function createCertificateViewUrl(certificate) {
     const currentUrl = window.location.href.split('?')[0];
     
-    // إنشاء QR Code يعرض معلومات الشهادة فقط (بدون صورة)
-    const certificateInfo = {
-        name: certificate.name,
-        description: certificate.description,
-        id: certificate.id
-    };
+    // إنشاء رابط بسيط يحتوي على المعلومات الأساسية
+    const params = new URLSearchParams({
+        name: encodeURIComponent(certificate.name),
+        description: certificate.description ? encodeURIComponent(certificate.description) : ''
+    });
     
-    // تشفير المعلومات بصيغة يمكن قراءتها
-    const encodedInfo = btoa(JSON.stringify(certificateInfo));
-    return `${currentUrl}?certificate=${encodedInfo}`;
+    return `${currentUrl}?${params.toString()}`;
 }
 
 // عرض الشهادات
@@ -394,29 +379,24 @@ async function renderCertificates() {
             ${c.description ? `<p style="color:#666; margin-bottom:10px;">${c.description}</p>` : ''}
             ${c.image ? `
                 <img src="${c.image}" class="certificate-image" alt="صورة الشهادة" onclick="showImageModal('${c.image}')">
-                <div class="qrcode-container">
-                    <div id="qrcode-certificate-${c.id}">
-                        <div class="loading">جاري إنشاء QR Code...</div>
-                    </div>
-                    <p style="margin:10px 0;font-size:12px;color:#666;">QR Code لمعلومات الشهادة</p>
-                    <small style="color:#999;">لرؤية الصورة، يجب أن تكون في نفس المتصفح</small>
+            ` : ''}
+            
+            <div class="qrcode-container">
+                <div id="qrcode-certificate-${c.id}">
+                    <div class="loading">جاري إنشاء QR Code...</div>
                 </div>
-            ` : `
-                <div class="qrcode-container">
-                    <div id="qrcode-certificate-${c.id}">
-                        <div class="loading">جاري إنشاء QR Code...</div>
-                    </div>
-                    <p style="margin:10px 0;font-size:12px;color:#666;">QR Code لمعلومات الشهادة</p>
-                </div>
-            `}
+                <p style="margin:10px 0;font-size:12px;color:#666;">QR Code لمعلومات الشهادة</p>
+                <small style="color:#999;">عند المسح، ستظهر صفحة بمعلومات الشهادة</small>
+            </div>
+            
             <div class="item-actions">
                 <button class="btn btn-whatsapp" onclick="shareCertificate(${c.id})">
                     <i class="fab fa-whatsapp"></i> مشاركة
                 </button>
+                <button class="btn btn-success" onclick="downloadCertificateQRCode(${c.id}, '${c.name}')">
+                    <i class="fas fa-download"></i> حفظ QR
+                </button>
                 ${c.image ? `
-                    <button class="btn btn-success" onclick="downloadCertificateQRCode(${c.id}, '${c.name}')">
-                        <i class="fas fa-download"></i> حفظ QR
-                    </button>
                     <button class="btn btn-info" onclick="downloadCertificateImage(${c.id})">
                         <i class="fas fa-download"></i> تحميل الصورة
                     </button>
@@ -530,7 +510,7 @@ function generateQRCode(id, url) {
     }
 }
 
-// توليد QR Code للشهادات - يعرض معلومات الشهادة فقط
+// توليد QR Code للشهادات - يعرض معلومات الشهادة
 function generateCertificateQRCode(id, certificate) {
     const container = document.getElementById(`qrcode-certificate-${id}`);
     if (!container) return;
@@ -584,9 +564,6 @@ function generateSimpleQRCode(containerId, data, title) {
         <p style="margin:10px 0;font-size:12px;color:#666;">${title}</p>
     `;
 }
-
-// باقي الدوال تبقى كما هي بدون تغيير...
-// [يتبع باقي الكود السابق بدون تغيير]
 
 // تحميل QR Code كصورة
 function downloadQRCode(id, title) {
@@ -654,7 +631,7 @@ function shareCertificate(id) {
     }
     
     message += `\n🔗 *رابط الشهادة:*\n${certificateUrl}`;
-    message += `\n\n*ملاحظة:* لرؤية الصورة الكاملة، يرجى زيارة الرابط من نفس المتصفح الذي تم إنشاء الشهادة فيه`;
+    message += `\n\n📱 *مسح QR Code:*\nيمكنك مسح QR Code لعرض معلومات الشهادة`;
     message += `\n\n---\nتم إنشاء الشهادة عبر نظام إدارة شهادات التحليل`;
     
     const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
