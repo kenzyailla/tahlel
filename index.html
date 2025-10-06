@@ -155,6 +155,27 @@
             box-shadow: 0 5px 15px rgba(0,0,0,0.2);
             border: 2px solid #8e44ad;
         }
+
+        .url-display {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 15px 0;
+            word-break: break-all;
+            direction: ltr;
+            text-align: center;
+        }
+
+        .url-display a {
+            color: #d63031;
+            text-decoration: none;
+            font-weight: bold;
+        }
+
+        .url-display a:hover {
+            text-decoration: underline;
+        }
         
         @media(max-width:768px){
             .items-container{grid-template-columns:1fr}
@@ -310,10 +331,17 @@ function checkIfViewingCertificateFromURL() {
 function showCertificateFromURL(name, description, imageData, certId) {
     // محاولة العثور على الشهادة الكاملة من localStorage
     let fullCertificate = null;
+    let hasImageInStorage = false;
+    
     if (certId) {
         loadDataFromStorage();
         fullCertificate = certificates.find(c => c.id == certId);
+        if (fullCertificate && fullCertificate.image) {
+            hasImageInStorage = true;
+        }
     }
+    
+    const currentUrl = window.location.href;
     
     document.body.innerHTML = `
         <div style="text-align:center; padding:20px; background:linear-gradient(135deg,#667eea 0%,#764ba2 100%); min-height:100vh; display:flex; flex-direction:column; justify-content:center; align-items:center;">
@@ -328,14 +356,30 @@ function showCertificateFromURL(name, description, imageData, certId) {
                     </div>
                 ` : ''}
                 
+                <!-- عرض الرابط بشكل واضح -->
+                <div class="url-display">
+                    <h3 style="color:#d63031; margin-bottom:10px;">
+                        <i class="fas fa-link"></i> رابط الشهادة:
+                    </h3>
+                    <a href="${currentUrl}" target="_blank" style="font-size:14px; word-break:break-all;">
+                        ${currentUrl}
+                    </a>
+                    <p style="color:#666; margin-top:10px; font-size:12px;">
+                        يمكنك نسخ هذا الرابط ومشاركته مع الآخرين
+                    </p>
+                </div>
+                
                 <!-- معاينة الصورة إذا كانت متاحة -->
-                ${fullCertificate && fullCertificate.image ? `
+                ${hasImageInStorage ? `
                     <div style="margin:20px 0;">
                         <h3 style="color:#2c3e50; margin-bottom:15px;">صورة الشهادة:</h3>
                         <img src="${fullCertificate.image}" class="certificate-preview" alt="صورة الشهادة">
                         <div style="margin-top:15px;">
                             <button onclick="downloadImage('${fullCertificate.image}', '${fullCertificate.name}')" class="btn btn-success" style="margin:5px;">
                                 <i class="fas fa-download"></i> تحميل الصورة
+                            </button>
+                            <button onclick="showFullImage('${fullCertificate.image}')" class="btn btn-info" style="margin:5px;">
+                                <i class="fas fa-expand"></i> عرض كامل
                             </button>
                         </div>
                     </div>
@@ -345,12 +389,13 @@ function showCertificateFromURL(name, description, imageData, certId) {
                             <i class="fas fa-info-circle"></i> لرؤية الصورة الكاملة:
                         </h3>
                         <p style="color:#666; margin-bottom:15px;">
-                            يرجى زيارة النظام الرئيسي من نفس المتصفح الذي تم إنشاء الشهادة فيه
+                            يرجى زيارة الرابط أعلاه من نفس المتصفح الذي تم إنشاء الشهادة فيه
                         </p>
                         ${fullCertificate ? `
-                            <button onclick="showOriginalCertificate(${fullCertificate.id})" class="btn btn-warning">
-                                <i class="fas fa-external-link-alt"></i> فتح في النظام الأصلي
-                            </button>
+                            <p style="color:#e74c3c; background:#ffeaa7; padding:10px; border-radius:5px;">
+                                <i class="fas fa-exclamation-triangle"></i>
+                                الصورة غير متاحة في هذا المتصفح. الرجاء استخدام المتصفح الأصلي.
+                            </p>
                         ` : ''}
                     </div>
                 `}
@@ -361,6 +406,7 @@ function showCertificateFromURL(name, description, imageData, certId) {
                     <p style="color:#666; margin:5px 0;">🏢 نوع المستند: شهادة تحليل كيماوية</p>
                     <p style="color:#666; margin:5px 0;">🔍 الحالة: معتمدة</p>
                     ${fullCertificate ? `<p style="color:#666; margin:5px 0;">🆔 رقم الشهادة: ${fullCertificate.id}</p>` : ''}
+                    ${hasImageInStorage ? `<p style="color:#27ae60; margin:5px 0;">✅ تحتوي على صورة الشهادة</p>` : ''}
                 </div>
                 
                 <p style="color:#999; margin-top:20px; font-size:0.9rem;">تم إنشاء هذه الشهادة عبر نظام إدارة شهادات التحليل</p>
@@ -372,15 +418,65 @@ function showCertificateFromURL(name, description, imageData, certId) {
                     <button onclick="window.print()" class="btn btn-info">
                         <i class="fas fa-print"></i> طباعة الشهادة
                     </button>
-                    ${fullCertificate && fullCertificate.image ? `
+                    <button onclick="copyLink('${currentUrl}')" class="btn btn-warning">
+                        <i class="fas fa-copy"></i> نسخ الرابط
+                    </button>
+                    ${hasImageInStorage ? `
                         <button onclick="downloadImage('${fullCertificate.image}', '${fullCertificate.name}')" class="btn btn-success">
                             <i class="fas fa-download"></i> تحميل الصورة
                         </button>
                     ` : ''}
                 </div>
+
+                <!-- معلومات إضافية للمستخدم -->
+                <div style="margin-top:20px; padding:15px; background:#d1ecf1; border-radius:8px; border-right:4px solid #17a2b8;">
+                    <h4 style="color:#0c5460; margin-bottom:10px;"><i class="fas fa-lightbulb"></i> نصائح للمشاركة:</h4>
+                    <ul style="color:#0c5460; text-align:right; margin:0; padding-right:15px;">
+                        <li>انسخ الرابط أعلاه ومشاركته عبر الواتساب أو البريد الإلكتروني</li>
+                        <li>استخدم زر "نسخ الرابط" لنسخ الرابط تلقائياً</li>
+                        <li>لرؤية الصورة، افتح الرابط من المتصفح الأصلي</li>
+                    </ul>
+                </div>
             </div>
         </div>
     `;
+}
+
+// نسخ الرابط إلى الحافظة
+function copyLink(url) {
+    navigator.clipboard.writeText(url).then(() => {
+        alert('تم نسخ الرابط إلى الحافظة!');
+    }).catch(() => {
+        // طريقة بديلة إذا فشلت الطريقة الأولى
+        const textArea = document.createElement('textarea');
+        textArea.value = url;
+        document.body.appendChild(textArea);
+        textArea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textArea);
+        alert('تم نسخ الرابط إلى الحافظة!');
+    });
+}
+
+// عرض الصورة كاملة
+function showFullImage(imageSrc) {
+    const modal = document.createElement('div');
+    modal.style.cssText = `
+        position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+        background: rgba(0,0,0,0.9); z-index: 2000; display: flex; 
+        align-items: center; justify-content: center; cursor: pointer;
+    `;
+    
+    const img = document.createElement('img');
+    img.src = imageSrc;
+    img.style.cssText = `
+        max-width: 90%; max-height: 90%; border-radius: 10px; 
+        box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    `;
+    
+    modal.appendChild(img);
+    modal.onclick = () => document.body.removeChild(modal);
+    document.body.appendChild(modal);
 }
 
 // تحميل الصورة
@@ -389,12 +485,6 @@ function downloadImage(imageData, fileName) {
     link.download = `شهادة-${fileName.replace(/\s+/g, '-')}.png`;
     link.href = imageData;
     link.click();
-}
-
-// فتح الشهادة في النظام الأصلي
-function showOriginalCertificate(certificateId) {
-    const baseUrl = window.location.href.split('?')[0];
-    window.location.href = baseUrl + '?view_certificate=' + certificateId;
 }
 
 // العودة إلى النظام الرئيسي
@@ -447,7 +537,9 @@ async function renderCertificates() {
         return;
     }
     
-    container.innerHTML = certificates.map(c => `
+    container.innerHTML = certificates.map(c => {
+        const certificateUrl = createCertificateViewUrl(c);
+        return `
         <div class="item-card">
             <h3 style="color:#8e44ad;margin-bottom:10px;">${c.name}</h3>
             ${c.description ? `<p style="color:#666; margin-bottom:10px;">${c.description}</p>` : ''}
@@ -465,6 +557,15 @@ async function renderCertificates() {
                     <div class="loading">جاري إنشاء QR Code...</div>
                 </div>
                 <p style="margin:10px 0;font-size:12px;color:#666;">QR Code لمعلومات الشهادة</p>
+                
+                <!-- عرض الرابط تحت QR Code -->
+                <div style="margin:10px 0; padding:10px; background:#f1f3f4; border-radius:5px;">
+                    <p style="margin:0; font-size:11px; color:#666; word-break:break-all;">
+                        <i class="fas fa-link"></i> 
+                        ${certificateUrl}
+                    </p>
+                </div>
+                
                 <small style="color:#999;">عند المسح، ستظهر صفحة بمعلومات الشهادة ${c.image ? 'ومعاينة للصورة' : ''}</small>
             </div>
             
@@ -475,8 +576,11 @@ async function renderCertificates() {
                 <button class="btn btn-success" onclick="downloadCertificateQRCode(${c.id}, '${c.name}')">
                     <i class="fas fa-download"></i> حفظ QR
                 </button>
+                <button class="btn btn-warning" onclick="copyLink('${certificateUrl}')">
+                    <i class="fas fa-copy"></i> نسخ الرابط
+                </button>
                 ${c.image ? `
-                    <button class="btn btn-warning" onclick="showImageModal('${c.image}')">
+                    <button class="btn btn-info" onclick="showImageModal('${c.image}')">
                         <i class="fas fa-eye"></i> معاينة الصورة
                     </button>
                 ` : ''}
@@ -485,7 +589,7 @@ async function renderCertificates() {
                 </button>
             </div>
         </div>
-    `).join('');
+    `}).join('');
     
     // توليد QR Codes للشهادات
     setTimeout(async () => {
@@ -498,60 +602,6 @@ async function renderCertificates() {
             console.error('Failed to load QR code library:', error);
             certificates.forEach(c => {
                 generateSimpleQRCode(`qrcode-certificate-${c.id}`, c, 'QR Code لمعلومات الشهادة');
-            });
-        }
-    }, 500);
-}
-
-// باقي الدوال تبقى كما هي...
-// [يتبع باقي الكود السابق بدون تغيير]
-
-// عرض الروابط مع QR Code
-async function renderLinks() {
-    const container = document.getElementById('linksContainer');
-    if (links.length === 0) {
-        container.innerHTML = '<div class="item-card" style="text-align:center;color:#666;"><i class="fas fa-link" style="font-size:3rem;margin-bottom:15px;"></i><h3>لا توجد روابط</h3><p>انقر على "إضافة رابط" لبدء الإدخال</p></div>';
-        return;
-    }
-    
-    container.innerHTML = links.map(l => `
-        <div class="item-card">
-            <h3 style="color:#2c3e50;margin-bottom:10px;">${l.title}</h3>
-            <a href="${l.url}" target="_blank" style="color:#3498db;word-break:break-all;">${l.url}</a>
-            
-            <!-- QR Code -->
-            <div class="qrcode-container">
-                <div id="qrcode-${l.id}">
-                    <div class="loading">جاري إنشاء QR Code...</div>
-                </div>
-                <p style="margin:10px 0;font-size:12px;color:#666;">QR Code للمسح السريع</p>
-            </div>
-            
-            <div class="item-actions">
-                <button class="btn btn-whatsapp" onclick="shareSingleLink('${l.title}', '${l.url}')">
-                    <i class="fab fa-whatsapp"></i> مشاركة
-                </button>
-                <button class="btn btn-success" onclick="downloadQRCode('${l.id}', '${l.title}')">
-                    <i class="fas fa-download"></i> حفظ QR
-                </button>
-                <button class="btn btn-danger" onclick="deleteLink(${l.id})">
-                    <i class="fas fa-trash"></i> حذف
-                </button>
-            </div>
-        </div>
-    `).join('');
-    
-    // توليد QR Codes بعد عرض العناصر
-    setTimeout(async () => {
-        try {
-            await loadQRCodeLibrary();
-            links.forEach(l => {
-                generateQRCode(l.id, l.url);
-            });
-        } catch (error) {
-            console.error('Failed to load QR code library:', error);
-            links.forEach(l => {
-                generateSimpleQRCode(`qrcode-${l.id}`, l.url, 'QR Code للمسح السريع');
             });
         }
     }, 500);
