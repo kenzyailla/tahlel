@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>نظام إدارة شهادات التحليل الكيماوية</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <script src="https://cdn.jsdelivr.net/npm/qr-code-styling@1.5.0/lib/qr-code-styling.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/qr-code-styling@1.6.0/lib/qr-code-styling.js"></script>
     <style>
         * {margin:0;padding:0;box-sizing:border-box; font-family: "Noto Kufi Arabic", sans-serif;}
         body {background:linear-gradient(135deg,#f5f7fa 0%,#e4e8f0 100%);color:#333;line-height:1.6;min-height:100vh;padding:20px;}
@@ -78,9 +78,13 @@
             background: #f8f9fa;
             border-radius: 10px;
             border: 2px dashed #ddd;
+            text-align: center;
         }
-        .qrcode-container div {
-            margin: 0 auto;
+        .qrcode-container canvas, .qrcode-container img {
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            background: white;
+            padding: 5px;
         }
         
         .item-actions{margin-top:15px;display:flex;gap:10px;justify-content:center;flex-wrap:wrap;}
@@ -118,6 +122,12 @@
             display: flex;
             align-items: center;
             justify-content: center;
+        }
+        
+        .loading {
+            color: #666;
+            font-size: 14px;
+            padding: 20px;
         }
         
         @media(max-width:768px){
@@ -218,6 +228,7 @@
 <script>
 let certificates = [];
 let links = [];
+let currentBaseUrl = window.location.href.split('/').slice(0, -1).join('/') + '/';
 
 // عند تحميل الصفحة
 document.addEventListener('DOMContentLoaded', () => {
@@ -225,6 +236,22 @@ document.addEventListener('DOMContentLoaded', () => {
     renderCertificates();
     renderLinks();
 });
+
+// تحميل مكتبة QR Code بشكل آمن
+function loadQRCodeLibrary() {
+    return new Promise((resolve, reject) => {
+        if (typeof QRCodeStyling !== 'undefined') {
+            resolve();
+            return;
+        }
+        
+        const script = document.createElement('script');
+        script.src = 'https://cdn.jsdelivr.net/npm/qr-code-styling@1.6.0/lib/qr-code-styling.js';
+        script.onload = resolve;
+        script.onerror = reject;
+        document.head.appendChild(script);
+    });
+}
 
 // التبديل بين التبويبات
 function switchTab(tab) {
@@ -248,8 +275,14 @@ function loadDataFromStorage() {
     if (l) links = JSON.parse(l);
 }
 
+// إنشاء رابط فريد لكل شهادة
+function createCertificateLink(certificateId, certificateName) {
+    // إنشاء رابط فريد يعرض الصورة عند المسح
+    return `${currentBaseUrl}?certificate=${certificateId}&name=${encodeURIComponent(certificateName)}`;
+}
+
 // عرض الشهادات
-function renderCertificates() {
+async function renderCertificates() {
     const container = document.getElementById('certificatesContainer');
     if (certificates.length === 0) {
         container.innerHTML = '<div class="item-card" style="text-align:center;color:#666;"><i class="fas fa-file-certificate" style="font-size:3rem;margin-bottom:15px;"></i><h3>لا توجد شهادات</h3><p>انقر على "إضافة شهادة" لبدء الإدخال</p></div>';
@@ -263,8 +296,10 @@ function renderCertificates() {
             ${c.image ? `
                 <img src="${c.image}" class="certificate-image" alt="صورة الشهادة" onclick="showImageModal('${c.image}')">
                 <div class="qrcode-container">
-                    <div id="qrcode-certificate-${c.id}"></div>
-                    <p style="margin:10px 0;font-size:12px;color:#666;">QR Code للصورة</p>
+                    <div id="qrcode-certificate-${c.id}">
+                        <div class="loading">جاري إنشاء QR Code...</div>
+                    </div>
+                    <p style="margin:10px 0;font-size:12px;color:#666;">QR Code لعرض الشهادة</p>
                 </div>
             ` : ''}
             <div class="item-actions">
@@ -287,17 +322,27 @@ function renderCertificates() {
     `).join('');
     
     // توليد QR Codes للشهادات التي تحتوي على صور
-    setTimeout(() => {
-        certificates.forEach(c => {
-            if (c.image) {
-                generateCertificateQRCode(c.id, c.image);
-            }
-        });
-    }, 300);
+    setTimeout(async () => {
+        try {
+            await loadQRCodeLibrary();
+            certificates.forEach(c => {
+                if (c.image) {
+                    generateCertificateQRCode(c.id, c.name, c.image);
+                }
+            });
+        } catch (error) {
+            console.error('Failed to load QR code library:', error);
+            certificates.forEach(c => {
+                if (c.image) {
+                    generateSimpleQRCode(`qrcode-certificate-${c.id}`, c.name, c.image, 'QR Code لعرض الشهادة');
+                }
+            });
+        }
+    }, 500);
 }
 
 // عرض الروابط مع QR Code
-function renderLinks() {
+async function renderLinks() {
     const container = document.getElementById('linksContainer');
     if (links.length === 0) {
         container.innerHTML = '<div class="item-card" style="text-align:center;color:#666;"><i class="fas fa-link" style="font-size:3rem;margin-bottom:15px;"></i><h3>لا توجد روابط</h3><p>انقر على "إضافة رابط" لبدء الإدخال</p></div>';
@@ -311,7 +356,9 @@ function renderLinks() {
             
             <!-- QR Code -->
             <div class="qrcode-container">
-                <div id="qrcode-${l.id}"></div>
+                <div id="qrcode-${l.id}">
+                    <div class="loading">جاري إنشاء QR Code...</div>
+                </div>
                 <p style="margin:10px 0;font-size:12px;color:#666;">QR Code للمسح السريع</p>
             </div>
             
@@ -330,11 +377,19 @@ function renderLinks() {
     `).join('');
     
     // توليد QR Codes بعد عرض العناصر
-    setTimeout(() => {
-        links.forEach(l => {
-            generateQRCode(l.id, l.url);
-        });
-    }, 300);
+    setTimeout(async () => {
+        try {
+            await loadQRCodeLibrary();
+            links.forEach(l => {
+                generateQRCode(l.id, l.url);
+            });
+        } catch (error) {
+            console.error('Failed to load QR code library:', error);
+            links.forEach(l => {
+                generateSimpleQRCode(`qrcode-${l.id}`, l.url, null, 'QR Code للمسح السريع');
+            });
+        }
+    }, 500);
 }
 
 // توليد QR Code للروابط
@@ -342,49 +397,92 @@ function generateQRCode(id, url) {
     const container = document.getElementById(`qrcode-${id}`);
     if (!container) return;
 
+    container.innerHTML = '';
+    
     try {
         const qrCode = new QRCodeStyling({
             width: 150,
             height: 150,
+            type: "canvas",
             data: url,
-            dotsOptions: { color: "#000000", type: "rounded" },
-            backgroundOptions: { color: "#ffffff" },
-            imageOptions: { crossOrigin: "anonymous", margin: 5 }
+            dotsOptions: {
+                color: "#2c3e50",
+                type: "rounded"
+            },
+            backgroundOptions: {
+                color: "#ffffff",
+            },
+            cornersSquareOptions: {
+                type: "extra-rounded"
+            },
+            cornersDotOptions: {
+                type: "dot"
+            }
         });
         
         qrCode.append(container);
     } catch (error) {
         console.error('QR Code error:', error);
-        container.innerHTML = `<div style="padding:20px;color:#666;background:#f5f5f5;border-radius:5px;">
-            <i class="fas fa-qrcode" style="font-size:2rem;"></i><br>
-            <small>QR Code غير متاح</small>
-        </div>`;
+        generateSimpleQRCode(`qrcode-${id}`, url, null, 'QR Code للمسح السريع');
     }
 }
 
-// توليد QR Code للشهادات (الصور)
-function generateCertificateQRCode(id, imageData) {
+// توليد QR Code للشهادات - يعرض صفحة خاصة بالشهادة
+function generateCertificateQRCode(id, certificateName, imageData) {
     const container = document.getElementById(`qrcode-certificate-${id}`);
     if (!container) return;
 
+    container.innerHTML = '';
+    
     try {
+        // إنشاء صفحة ويب بسيطة تعرض الشهادة
+        const certificatePageUrl = createCertificateLink(id, certificateName);
+        
         const qrCode = new QRCodeStyling({
             width: 150,
             height: 150,
-            data: imageData,
-            dotsOptions: { color: "#8e44ad", type: "rounded" },
-            backgroundOptions: { color: "#ffffff" },
-            imageOptions: { crossOrigin: "anonymous", margin: 5 }
+            type: "canvas",
+            data: certificatePageUrl,
+            dotsOptions: {
+                color: "#8e44ad",
+                type: "rounded"
+            },
+            backgroundOptions: {
+                color: "#ffffff",
+            },
+            cornersSquareOptions: {
+                type: "extra-rounded"
+            },
+            cornersDotOptions: {
+                type: "dot"
+            }
         });
         
         qrCode.append(container);
     } catch (error) {
         console.error('QR Code error:', error);
-        container.innerHTML = `<div style="padding:20px;color:#666;background:#f5f5f5;border-radius:5px;">
-            <i class="fas fa-qrcode" style="font-size:2rem;"></i><br>
-            <small>QR Code غير متاح</small>
-        </div>`;
+        generateSimpleQRCode(`qrcode-certificate-${c.id}`, certificateName, imageData, 'QR Code لعرض الشهادة');
     }
+}
+
+// بديل QR Code باستخدام خدمة خارجية
+function generateSimpleQRCode(containerId, data, imageData, title) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    
+    // للشهادات، ننشئ رابطاً خاصاً
+    let qrData = data;
+    if (imageData && containerId.includes('certificate')) {
+        // إذا كانت شهادة، ننشئ رابطاً وصفياً
+        qrData = `شهادة تحليل: ${data}\n\nلمشاهدة الصورة، يرجى زيارة النظام الرئيسي.`;
+    }
+    
+    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(qrData)}`;
+    
+    container.innerHTML = `
+        <img src="${qrUrl}" alt="QR Code" style="width:150px;height:150px;border-radius:5px;">
+        <p style="margin:10px 0;font-size:12px;color:#666;">${title}</p>
+    `;
 }
 
 // تحميل QR Code كصورة
@@ -395,6 +493,12 @@ function downloadQRCode(id, title) {
         const link = document.createElement('a');
         link.download = `qrcode-${title.replace(/\s+/g, '-')}.png`;
         link.href = canvas.toDataURL();
+        link.click();
+    } else if (container && container.querySelector('img')) {
+        const img = container.querySelector('img');
+        const link = document.createElement('a');
+        link.download = `qrcode-${title.replace(/\s+/g, '-')}.png`;
+        link.href = img.src;
         link.click();
     } else {
         alert('QR Code غير جاهز للتحميل');
@@ -409,6 +513,12 @@ function downloadCertificateQRCode(id, title) {
         const link = document.createElement('a');
         link.download = `qrcode-${title.replace(/\s+/g, '-')}.png`;
         link.href = canvas.toDataURL();
+        link.click();
+    } else if (container && container.querySelector('img')) {
+        const img = container.querySelector('img');
+        const link = document.createElement('a');
+        link.download = `qrcode-${title.replace(/\s+/g, '-')}.png`;
+        link.href = img.src;
         link.click();
     } else {
         alert('QR Code غير جاهز للتحميل');
@@ -438,10 +548,9 @@ function shareCertificate(id) {
         message += `*الوصف:* ${certificate.description}\n`;
     }
     
-    // إذا كانت هناك صورة، نضيف نص إضافي
     if (certificate.image) {
         message += `\n📷 *تحتوي على صورة الشهادة*`;
-        message += `\n\nيمكنك مسح QR Code لعرض الصورة مباشرة`;
+        message += `\n\nيمكنك مسح QR Code لعرض الصورة`;
     }
     
     message += `\n\n---\nتم إنشاء الشهادة عبر نظام إدارة شهادات التحليل`;
@@ -526,11 +635,6 @@ function addNewCertificate() {
     }
 }
 
-// باقي الدوال تبقى كما هي...
-// [يتبع باقي الكود دون تغيير]
-
-
-
 // إضافة رابط جديد
 function addNewLink() {
     const title = document.getElementById('linkTitle').value.trim();
@@ -591,7 +695,7 @@ function searchCertificates() {
         <div class="item-card">
             <h3 style="color:#8e44ad;margin-bottom:10px;">${c.name}</h3>
             ${c.description ? `<p style="color:#666; margin-bottom:10px;">${c.description}</p>` : ''}
-            ${c.image ? `<img src="${c.image}" class="certificate-image" alt="صورة الشهادة">` : ''}
+            ${c.image ? `<img src="${c.image}" class="certificate-image" alt="صورة الشهادة" onclick="showImageModal('${c.image}')">` : ''}
             <div class="item-actions">
                 <button class="btn btn-whatsapp" onclick="shareCertificate(${c.id})">
                     <i class="fab fa-whatsapp"></i> مشاركة
@@ -721,6 +825,38 @@ function downloadFile(content, fileName, type) {
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
 }
+
+// التحقق من وجود معلمات URL لعرض شهادة محددة
+function checkUrlParameters() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const certificateId = urlParams.get('certificate');
+    const certificateName = urlParams.get('name');
+    
+    if (certificateId && certificateName) {
+        // عرض الشهادة في صفحة منفصلة
+        showCertificatePage(certificateId, certificateName);
+    }
+}
+
+// عرض صفحة الشهادة (للاستخدام المستقبلي)
+function showCertificatePage(certificateId, certificateName) {
+    const certificate = certificates.find(c => c.id == certificateId);
+    if (certificate && certificate.image) {
+        document.body.innerHTML = `
+            <div style="text-align:center; padding:20px; background:white; min-height:100vh;">
+                <h1 style="color:#8e44ad; margin-bottom:20px;">${certificateName}</h1>
+                <img src="${certificate.image}" style="max-width:100%; max-height:80vh; border-radius:10px; box-shadow:0 5px 15px rgba(0,0,0,0.2);">
+                <p style="margin-top:20px; color:#666;">شهادة تحليل كيماوية</p>
+                <button onclick="window.close()" style="margin-top:20px; padding:10px 20px; background:#8e44ad; color:white; border:none; border-radius:5px; cursor:pointer;">
+                    إغلاق
+                </button>
+            </div>
+        `;
+    }
+}
+
+// التحقق من المعلمات عند التحميل
+checkUrlParameters();
 </script>
 </body>
 </html>
