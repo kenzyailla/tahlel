@@ -137,6 +137,26 @@
             font-size: 14px;
             color: #555;
         }
+
+        .upload-instructions {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 10px 0;
+            text-align: right;
+        }
+
+        .github-url {
+            background: #f1f8ff;
+            border: 1px solid #d1d5da;
+            border-radius: 6px;
+            padding: 8px;
+            margin: 10px 0;
+            font-size: 12px;
+            color: #0366d6;
+            word-break: break-all;
+        }
         
         @media(max-width:768px){
             .items-container{grid-template-columns:1fr}
@@ -160,19 +180,30 @@
         <!-- شهادات -->
         <div class="tab-content active" id="certificates-tab">
             <div class="instructions">
-                <h3><i class="fas fa-info-circle"></i> تعليمات إضافة الشهادات من واتساب:</h3>
+                <h3><i class="fas fa-info-circle"></i> كيفية استخدام النظام:</h3>
                 <ol style="text-align: right; margin-right: 20px;">
-                    <li>احفظ الصورة من واتساب إلى معرض الصور</li>
-                    <li>انقر على "إضافة شهادة" أدناه</li>
-                    <li>اختر "رفع صورة من الجهاز"</li>
-                    <li>اختر الصورة من معرض الصور</li>
-                    <li>أدخل اسم المادة وانقر "حفظ"</li>
+                    <li>انقر على "إضافة شهادة"</li>
+                    <li>أدخل اسم المادة واختر الصورة</li>
+                    <li>انقر "حفظ الشهادة" - سيتم حفظها في متصفحك</li>
+                    <li>لتفعيل الباركود: احفظ الصورة وارفعها يدوياً لـ GitHub</li>
+                </ol>
+            </div>
+
+            <div class="upload-instructions">
+                <h4><i class="fas fa-rocket"></i> لتفعيل الباركود (اختياري):</h4>
+                <ol style="text-align: right; margin-right: 20px;">
+                    <li>بعد إضافة الشهادة، انقر على "تحميل الصورة"</li>
+                    <li>احفظ الصورة على جهازك</li>
+                    <li>اذهب إلى <a href="https://github.com/kenzyailla/tahlel" target="_blank">مستودع GitHub</a></li>
+                    <li>أنشئ مجلد <code>certificates</code> إن لم يكن موجوداً</li>
+                    <li>ارفع الصورة إلى المجلد</li>
+                    <li>انسخ رابط الصورة وأضفه يدوياً للنظام</li>
                 </ol>
             </div>
             
             <div class="controls">
                 <button class="btn btn-primary" onclick="showAddCertificateModal()"><i class="fas fa-plus"></i> إضافة شهادة</button>
-                <button class="btn btn-warning" onclick="showQuickAddModal()"><i class="fas fa-mobile-alt"></i> إضافة سريعة من الجهاز</button>
+                <button class="btn btn-warning" onclick="showManualLinkModal()"><i class="fas fa-link"></i> إضافة رابط يدوي</button>
                 <button class="btn btn-success" onclick="exportCertificates()"><i class="fas fa-download"></i> تصدير TXT</button>
                 <button class="btn btn-info" onclick="exportDataAsJSON()"><i class="fas fa-file-export"></i> تصدير JSON</button>
                 <label class="btn btn-primary">
@@ -222,29 +253,23 @@
             </div>
             
             <div style="margin-top:20px;">
-                <button class="btn btn-primary" onclick="addNewCertificate()">حفظ الشهادة</button>
+                <button class="btn btn-primary" onclick="addNewCertificate()"><i class="fas fa-save"></i> حفظ الشهادة</button>
                 <button class="btn" onclick="hideAddCertificateModal()" style="background:#ccc;">إلغاء</button>
             </div>
         </div>
     </div>
 
-    <!-- مودال الإضافة السريعة -->
-    <div class="modal" id="quickAddModal">
+    <!-- مودال إضافة رابط يدوي -->
+    <div class="modal" id="manualLinkModal">
         <div class="modal-content">
-            <h2><i class="fas fa-bolt"></i> إضافة سريعة من الجهاز</h2>
-            <p style="margin-bottom:15px;color:#666;">اختر صورة الشهادة من معرض الصور:</p>
-            
-            <div class="file-input-container">
-                <label for="quickCertificateImage"><i class="fas fa-images"></i> اختر صورة من معرض الصور</label>
-                <input type="file" id="quickCertificateImage" accept="image/*" onchange="handleQuickAdd(event)">
-                <img id="quickImagePreview" class="image-preview" alt="معاينة الصورة">
-            </div>
-            
-            <input type="text" id="quickCertificateName" placeholder="اسم المادة الكيماوية" style="margin-top:15px;">
-            
+            <h2><i class="fas fa-link"></i> إضافة رابط GitHub يدوياً</h2>
+            <select id="certificateSelect" style="width:100%;padding:10px;margin:10px 0;border-radius:8px;">
+                <option value="">اختر الشهادة</option>
+            </select>
+            <input type="url" id="manualGithubUrl" placeholder="https://raw.githubusercontent.com/kenzyailla/tahlel/main/certificates/..." style="margin:10px 0;">
             <div style="margin-top:20px;">
-                <button class="btn btn-primary" onclick="addQuickCertificate()">حفظ الشهادة</button>
-                <button class="btn" onclick="hideQuickAddModal()" style="background:#ccc;">إلغاء</button>
+                <button class="btn btn-primary" onclick="addManualGithubLink()"><i class="fas fa-save"></i> حفظ الرابط</button>
+                <button class="btn" onclick="hideManualLinkModal()" style="background:#ccc;">إلغاء</button>
             </div>
         </div>
     </div>
@@ -265,7 +290,6 @@
 <script>
 let certificates = [];
 let links = [];
-let quickAddImageData = null;
 
 // عند تحميل الصفحة
 document.addEventListener('DOMContentLoaded', () => {
@@ -315,32 +339,6 @@ function previewImage(event) {
     }
 }
 
-// معالجة الإضافة السريعة
-function handleQuickAdd(event) {
-    const input = event.target;
-    const preview = document.getElementById('quickImagePreview');
-    
-    if (input.files && input.files[0]) {
-        const reader = new FileReader();
-        
-        reader.onload = function(e) {
-            preview.src = e.target.result;
-            preview.style.display = 'block';
-            quickAddImageData = e.target.result;
-            
-            // اقتراح اسم تلقائي من اسم الملف
-            const fileName = input.files[0].name;
-            const nameWithoutExt = fileName.replace(/\.[^/.]+$/, "");
-            document.getElementById('quickCertificateName').value = nameWithoutExt;
-        }
-        
-        reader.readAsDataURL(input.files[0]);
-    } else {
-        preview.style.display = 'none';
-        quickAddImageData = null;
-    }
-}
-
 // تحويل الصورة إلى Base64
 function imageToBase64(file, callback) {
     const reader = new FileReader();
@@ -350,15 +348,15 @@ function imageToBase64(file, callback) {
     reader.readAsDataURL(file);
 }
 
-// توليد QR Code للروابط
-function generateQRCode(id, data) {
-    const container = document.getElementById(`link-qrcode-${id}`);
-    if (!container) {
-        console.log('Container not found for:', id);
-        return;
-    }
+// توليد QR Code
+function generateQRCode(containerId, data) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
 
     try {
+        // مسح المحتوى القديم أولاً
+        container.innerHTML = '';
+        
         const qrCode = new QRCodeStyling({
             width: 150,
             height: 150,
@@ -369,18 +367,12 @@ function generateQRCode(id, data) {
             },
             backgroundOptions: {
                 color: "#ffffff",
-            },
-            imageOptions: {
-                crossOrigin: "anonymous",
-                margin: 5
             }
         });
         
         qrCode.append(container);
-        console.log('QR Code generated for:', data);
     } catch (error) {
         console.error('QR Code error:', error);
-        // بديل إذا فشلت المكتبة
         container.innerHTML = `<div style="padding:20px;color:#666;background:#f5f5f5;border-radius:5px;">
             <i class="fas fa-qrcode" style="font-size:2rem;"></i><br>
             <small>QR Code غير متاح</small>
@@ -388,224 +380,119 @@ function generateQRCode(id, data) {
     }
 }
 
-// توليد QR Code للشهادات
-function generateCertificateQRCode(id, data) {
-    const container = document.getElementById(`certificate-qrcode-${id}`);
-    if (!container) {
-        console.log('Container not found for:', id);
+// إضافة شهادة جديدة - هذه الدالة الأساسية
+function addNewCertificate() {
+    const name = document.getElementById('certificateName').value.trim();
+    const imageFile = document.getElementById('certificateImage').files[0];
+    
+    if (!name) {
+        alert('الرجاء إدخال اسم المادة الكيماوية');
         return;
     }
-
-    try {
-        const qrCode = new QRCodeStyling({
-            width: 150,
-            height: 150,
-            data: data,
-            dotsOptions: {
-                color: "#8e44ad",
-                type: "rounded"
-            },
-            backgroundOptions: {
-                color: "#ffffff",
-            },
-            imageOptions: {
-                crossOrigin: "anonymous",
-                margin: 5
-            }
-        });
+    
+    if (!imageFile) {
+        alert('الرجاء اختيار صورة الشهادة');
+        return;
+    }
+    
+    // تحويل الصورة إلى Base64
+    imageToBase64(imageFile, function(base64Image) {
+        const certificate = {
+            id: Date.now(),
+            name: name,
+            image: base64Image,
+            githubUrl: '' // سيتم إضافته لاحقاً
+        };
         
-        qrCode.append(container);
-        console.log('Certificate QR Code generated for:', data);
-    } catch (error) {
-        console.error('QR Code error:', error);
-        container.innerHTML = `<div style="padding:20px;color:#666;background:#f5f5f5;border-radius:5px;">
-            <i class="fas fa-qrcode" style="font-size:2rem;"></i><br>
-            <small>QR Code غير متاح</small>
-        </div>`;
-    }
+        certificates.push(certificate);
+        saveDataToStorage();
+        renderCertificates();
+        hideAddCertificateModal();
+        
+        alert('تم حفظ الشهادة بنجاح! يمكنك الآن تحميل الصورة ورفعها إلى GitHub.');
+    });
 }
 
-// تحميل QR Code كصورة
-function downloadQRCode(id, title) {
-    const container = document.getElementById(`link-qrcode-${id}`);
-    if (container && container.querySelector('canvas')) {
-        const canvas = container.querySelector('canvas');
-        const link = document.createElement('a');
-        link.download = `qrcode-${title.replace(/\s+/g, '-')}.png`;
-        link.href = canvas.toDataURL();
-        link.click();
-    } else {
-        alert('QR Code غير جاهز للتحميل');
-    }
-}
-
-// تحميل QR Code الشهادة كصورة
-function downloadCertificateQRCode(id, title) {
-    const container = document.getElementById(`certificate-qrcode-${id}`);
-    if (container && container.querySelector('canvas')) {
-        const canvas = container.querySelector('canvas');
-        const link = document.createElement('a');
-        link.download = `شهادة-${title.replace(/\s+/g, '-')}.png`;
-        link.href = canvas.toDataURL();
-        link.click();
-    } else {
-        alert('QR Code غير جاهز للتحميل');
-    }
-}
-
-// إنشاء نص معلومات الشهادة للباركود
-function createCertificateInfo(certificate) {
-    const timestamp = new Date(certificate.id).toLocaleDateString('ar-EG');
-    return `🔬 شهادة تحليل كيماوية
-
-📋 اسم المادة: ${certificate.name}
-🆔 رقم الشهادة: ${certificate.id}
-📅 تاريخ الإضافة: ${timestamp}
-
----
-معلومات الشهادة
-يمكن مسح هذا الباركود لمشاركة معلومات الشهادة`;
-}
-
-// عرض الشهادات مع الباركود
+// عرض الشهادات
 function renderCertificates() {
     const container = document.getElementById('certificatesContainer');
+    
     if (certificates.length === 0) {
         container.innerHTML = '<div class="item-card" style="text-align:center;color:#666;"><i class="fas fa-file-certificate" style="font-size:3rem;margin-bottom:15px;"></i><h3>لا توجد شهادات</h3><p>انقر على "إضافة شهادة" لبدء الإدخال</p></div>';
         return;
     }
     
-    container.innerHTML = certificates.map(c => `
+    container.innerHTML = certificates.map(certificate => {
+        const hasGithubUrl = certificate.githubUrl && certificate.githubUrl !== '';
+        
+        return `
         <div class="item-card">
-            <h3 style="color:#8e44ad;margin-bottom:10px;">${c.name}</h3>
+            <h3 style="color:#8e44ad;margin-bottom:10px;">${certificate.name}</h3>
             
-            ${c.image ? `<img src="${c.image}" class="certificate-image" alt="شهادة تحليل ${c.name}">` : ''}
+            <img src="${certificate.image}" class="certificate-image" alt="شهادة تحليل ${certificate.name}">
             
-            <!-- معلومات الشهادة -->
-            <div class="certificate-info">
-                <i class="fas fa-info-circle"></i> 
-                شهادة تحليل - ${c.name}
-            </div>
-            
-            <!-- باركود معلومات الشهادة -->
-            <div class="qrcode-container">
-                <div id="certificate-qrcode-${c.id}"></div>
-                <p style="margin:10px 0;font-size:12px;color:#666;">QR Code لمعلومات الشهادة</p>
-            </div>
+            ${hasGithubUrl ? `
+                <div class="github-url">
+                    <i class="fab fa-github"></i> 
+                    <a href="${certificate.githubUrl}" target="_blank" style="color:#0366d6;">
+                        ${certificate.githubUrl}
+                    </a>
+                </div>
+                
+                <div class="qrcode-container">
+                    <div id="qrcode-${certificate.id}"></div>
+                    <p style="margin:10px 0;font-size:12px;color:#666;">QR Code يفتح صورة الشهادة مباشرة</p>
+                </div>
+            ` : `
+                <div class="upload-instructions" style="margin:15px 0;">
+                    <p><i class="fas fa-info-circle"></i> لتفعيل الباركود:</p>
+                    <ol style="text-align:right;margin-right:15px;font-size:12px;">
+                        <li>انقر "تحميل الصورة" واحفظها</li>
+                        <li>ارفع الصورة لـ GitHub</li>
+                        <li>انقر "إضافة رابط يدوي" وأضف الرابط</li>
+                    </ol>
+                </div>
+            `}
             
             <div class="item-actions">
-                <button class="btn btn-whatsapp" onclick="shareCertificate('${c.id}')">
+                <button class="btn btn-whatsapp" onclick="shareCertificate(${certificate.id})">
                     <i class="fab fa-whatsapp"></i> مشاركة
                 </button>
-                <button class="btn btn-success" onclick="downloadCertificateQRCode('${c.id}', '${c.name}')">
-                    <i class="fas fa-download"></i> حفظ QR
-                </button>
-                <button class="btn btn-primary" onclick="downloadCertificateImage('${c.id}', '${c.name}')">
+                ${hasGithubUrl ? `
+                    <button class="btn btn-success" onclick="downloadQRCode(${certificate.id}, '${certificate.name}')">
+                        <i class="fas fa-download"></i> حفظ QR
+                    </button>
+                ` : ''}
+                <button class="btn btn-primary" onclick="downloadCertificateImage(${certificate.id}, '${certificate.name}')">
                     <i class="fas fa-download"></i> تحميل الصورة
                 </button>
-                <button class="btn btn-danger" onclick="deleteCertificate(${c.id})">
+                ${!hasGithubUrl ? `
+                    <button class="btn btn-warning" onclick="setCertificateForManualLink(${certificate.id})">
+                        <i class="fas fa-link"></i> إضافة رابط
+                    </button>
+                ` : ''}
+                <button class="btn btn-danger" onclick="deleteCertificate(${certificate.id})">
                     <i class="fas fa-trash"></i> حذف
                 </button>
             </div>
         </div>
-    `).join('');
+        `;
+    }).join('');
     
-    // توليد QR Codes بعد عرض العناصر
+    // توليد QR Codes للشهادات التي لها روابط GitHub
     setTimeout(() => {
-        certificates.forEach(c => {
-            const certificateInfo = createCertificateInfo(c);
-            generateCertificateQRCode(c.id, certificateInfo);
-        });
-    }, 300);
-}
-
-// عرض الروابط مع الباركود
-function renderLinks() {
-    const container = document.getElementById('linksContainer');
-    if (links.length === 0) {
-        container.innerHTML = '<div class="item-card" style="text-align:center;color:#666;"><i class="fas fa-link" style="font-size:3rem;margin-bottom:15px;"></i><h3>لا توجد روابط</h3><p>انقر على "إضافة رابط" لبدء الإدخال</p></div>';
-        return;
-    }
-    
-    container.innerHTML = links.map(l => `
-        <div class="item-card">
-            <h3 style="color:#2c3e50;margin-bottom:10px;">${l.title}</h3>
-            
-            <!-- عرض الرابط كنص صغير -->
-            <div class="link-url" title="${l.url}">
-                <i class="fas fa-link"></i> ${l.url.length > 40 ? l.url.substring(0, 40) + '...' : l.url}
-            </div>
-            
-            <!-- باركود الرابط -->
-            <div class="qrcode-container">
-                <div id="link-qrcode-${l.id}"></div>
-                <p style="margin:10px 0;font-size:12px;color:#666;">QR Code للمسح السريع</p>
-            </div>
-            
-            <div class="item-actions">
-                <button class="btn btn-whatsapp" onclick="shareSingleLink('${l.title}', '${l.url}')">
-                    <i class="fab fa-whatsapp"></i> مشاركة
-                </button>
-                <button class="btn btn-success" onclick="downloadQRCode('${l.id}', '${l.title}')">
-                    <i class="fas fa-download"></i> حفظ QR
-                </button>
-                <button class="btn btn-danger" onclick="deleteLink(${l.id})">
-                    <i class="fas fa-trash"></i> حذف
-                </button>
-            </div>
-        </div>
-    `).join('');
-    
-    // توليد QR Codes بعد عرض العناصر
-    setTimeout(() => {
-        links.forEach(l => {
-            generateQRCode(l.id, l.url);
-        });
-    }, 300);
-}
-
-// مشاركة شهادة التحليل عبر واتساب
-function shareCertificate(id) {
-    const certificate = certificates.find(c => c.id == id);
-    if (!certificate) return;
-    
-    if (certificate.image) {
-        shareCertificateWithImage(certificate);
-    } else {
-        shareCertificateAsText(certificate);
-    }
-}
-
-// مشاركة الشهادة مع الصورة
-function shareCertificateWithImage(certificate) {
-    const message = `📋 شهادة تحليل: ${certificate.name}\n\nتم إرسال شهادة التحليل`;
-    const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
-    
-    const newWindow = window.open(whatsappUrl, '_blank');
-    
-    setTimeout(() => {
-        if (newWindow && !newWindow.closed) {
-            if (confirm('تم فتح واتساب. هل تريد تحميل صورة الشهادة لمشاركتها؟')) {
-                downloadCertificateImageDirect(certificate.name, certificate.image);
+        certificates.forEach(certificate => {
+            if (certificate.githubUrl && certificate.githubUrl !== '') {
+                generateQRCode(`qrcode-${certificate.id}`, certificate.githubUrl);
             }
-        }
-    }, 1000);
-}
-
-// مشاركة الشهادة كنص فقط
-function shareCertificateAsText(certificate) {
-    const message = `📋 شهادة تحليل: ${certificate.name}\n\nلا تتوفر صورة لهذه الشهادة حالياً`;
-    const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
-    window.open(whatsappUrl, '_blank');
+        });
+    }, 300);
 }
 
 // تحميل صورة الشهادة
 function downloadCertificateImage(id, name) {
-    const certificate = certificates.find(c => c.id == id);
-    if (!certificate || !certificate.image) {
-        alert('لا توجد صورة لهذه الشهادة');
-        return;
-    }
+    const certificate = certificates.find(c => c.id === id);
+    if (!certificate) return;
     
     const link = document.createElement('a');
     link.download = `شهادة_${name.replace(/\s+/g, '_')}.jpg`;
@@ -613,15 +500,38 @@ function downloadCertificateImage(id, name) {
     link.click();
 }
 
-// تحميل مباشر للصورة
-function downloadCertificateImageDirect(name, imageData) {
-    const link = document.createElement('a');
-    link.download = `شهادة_${name.replace(/\s+/g, '_')}.jpg`;
-    link.href = imageData;
-    link.click();
+// تحميل QR Code كصورة
+function downloadQRCode(id, title) {
+    const container = document.getElementById(`qrcode-${id}`);
+    if (container && container.querySelector('canvas')) {
+        const canvas = container.querySelector('canvas');
+        const link = document.createElement('a');
+        link.download = `باركود_${title.replace(/\s+/g, '_')}.png`;
+        link.href = canvas.toDataURL();
+        link.click();
+    } else {
+        alert('QR Code غير جاهز للتحميل');
+    }
 }
 
-// دوال عرض وإخفاء النماذج
+// مشاركة الشهادة
+function shareCertificate(id) {
+    const certificate = certificates.find(c => c.id === id);
+    if (!certificate) return;
+    
+    let message = `📋 شهادة تحليل: ${certificate.name}`;
+    
+    if (certificate.githubUrl) {
+        message += `\n\n${certificate.githubUrl}`;
+    } else {
+        message += '\n\n(الصورة مخزنة محلياً)';
+    }
+    
+    const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
+    window.open(whatsappUrl, '_blank');
+}
+
+// دوال العرض والإخفاء للنماذج
 function showAddCertificateModal() { 
     document.getElementById('addCertificateModal').style.display = 'flex'; 
 }
@@ -633,89 +543,76 @@ function hideAddCertificateModal() {
     document.getElementById('imagePreview').style.display = 'none';
 }
 
-function showQuickAddModal() {
-    document.getElementById('quickAddModal').style.display = 'flex'; 
+function showManualLinkModal() {
+    const select = document.getElementById('certificateSelect');
+    select.innerHTML = '<option value="">اختر الشهادة</option>';
+    
+    certificates.forEach(certificate => {
+        if (!certificate.githubUrl) {
+            const option = document.createElement('option');
+            option.value = certificate.id;
+            option.textContent = certificate.name;
+            select.appendChild(option);
+        }
+    });
+    
+    document.getElementById('manualLinkModal').style.display = 'flex'; 
 }
 
-function hideQuickAddModal() { 
-    document.getElementById('quickAddModal').style.display = 'none'; 
-    document.getElementById('quickCertificateName').value = '';
-    document.getElementById('quickCertificateImage').value = '';
-    document.getElementById('quickImagePreview').style.display = 'none';
-    quickAddImageData = null;
+function hideManualLinkModal() { 
+    document.getElementById('manualLinkModal').style.display = 'none'; 
+    document.getElementById('manualGithubUrl').value = '';
 }
 
+function setCertificateForManualLink(id) {
+    const certificate = certificates.find(c => c.id === id);
+    if (certificate) {
+        const select = document.getElementById('certificateSelect');
+        select.innerHTML = '<option value="">اختر الشهادة</option>';
+        const option = document.createElement('option');
+        option.value = certificate.id;
+        option.textContent = certificate.name;
+        option.selected = true;
+        select.appendChild(option);
+        document.getElementById('manualLinkModal').style.display = 'flex';
+    }
+}
+
+function addManualGithubLink() {
+    const certificateId = parseInt(document.getElementById('certificateSelect').value);
+    const githubUrl = document.getElementById('manualGithubUrl').value.trim();
+    
+    if (!certificateId) {
+        alert('الرجاء اختيار شهادة');
+        return;
+    }
+    
+    if (!githubUrl) {
+        alert('الرجاء إدخال رابط GitHub');
+        return;
+    }
+    
+    if (!githubUrl.startsWith('http')) {
+        alert('الرجاء إدخال رابط صحيح يبدأ بـ http:// أو https://');
+        return;
+    }
+    
+    const certificate = certificates.find(c => c.id === certificateId);
+    if (certificate) {
+        certificate.githubUrl = githubUrl;
+        saveDataToStorage();
+        renderCertificates();
+        hideManualLinkModal();
+        alert('تم إضافة رابط GitHub بنجاح! الباركود جاهز الآن.');
+    }
+}
+
+// باقي الدوال تبقى كما هي...
 function showAddLinkModal() { document.getElementById('addLinkModal').style.display = 'flex'; }
-
 function hideAddLinkModal() { 
     document.getElementById('addLinkModal').style.display = 'none'; 
     document.getElementById('linkTitle').value = '';
     document.getElementById('linkUrl').value = '';
-}
-
-// إضافة شهادة جديدة
-function addNewCertificate() {
-    const name = document.getElementById('certificateName').value.trim();
-    const imageFile = document.getElementById('certificateImage').files[0];
-    
-    if (!name) {
-        alert('الرجاء إدخال اسم المادة الكيماوية');
-        return;
-    }
-    
-    if (imageFile) {
-        imageToBase64(imageFile, function(base64Image) {
-            const certificate = {
-                id: Date.now(),
-                name: name,
-                image: base64Image
-            };
-            
-            certificates.push(certificate);
-            saveDataToStorage();
-            renderCertificates();
-            hideAddCertificateModal();
-        });
-    } else {
-        const certificate = {
-            id: Date.now(),
-            name: name,
-            image: null
-        };
-        
-        certificates.push(certificate);
-        saveDataToStorage();
-        renderCertificates();
-        hideAddCertificateModal();
-    }
-}
-
-// إضافة شهادة سريعة
-function addQuickCertificate() {
-    const name = document.getElementById('quickCertificateName').value.trim();
-    
-    if (!name) {
-        alert('الرجاء إدخال اسم المادة الكيماوية');
-        return;
-    }
-    
-    if (!quickAddImageData) {
-        alert('الرجاء اختيار صورة الشهادة');
-        return;
-    }
-    
-    const certificate = {
-        id: Date.now(),
-        name: name,
-        image: quickAddImageData
-    };
-    
-    certificates.push(certificate);
-    saveDataToStorage();
-    renderCertificates();
-    hideQuickAddModal();
-    
-    alert('تم إضافة الشهادة بنجاح!');
 }
 
 function addNewLink() {
@@ -767,43 +664,68 @@ function searchCertificates() {
         return;
     }
     
-    container.innerHTML = filteredCertificates.map(c => `
+    container.innerHTML = filteredCertificates.map(certificate => {
+        const hasGithubUrl = certificate.githubUrl && certificate.githubUrl !== '';
+        
+        return `
         <div class="item-card">
-            <h3 style="color:#8e44ad;margin-bottom:10px;">${c.name}</h3>
+            <h3 style="color:#8e44ad;margin-bottom:10px;">${certificate.name}</h3>
             
-            ${c.image ? `<img src="${c.image}" class="certificate-image" alt="شهادة تحليل ${c.name}">` : ''}
+            <img src="${certificate.image}" class="certificate-image" alt="شهادة تحليل ${certificate.name}">
             
-            <div class="certificate-info">
-                <i class="fas fa-info-circle"></i> 
-                شهادة تحليل - ${c.name}
-            </div>
-            
-            <div class="qrcode-container">
-                <div id="certificate-qrcode-${c.id}"></div>
-                <p style="margin:10px 0;font-size:12px;color:#666;">QR Code لمعلومات الشهادة</p>
-            </div>
+            ${hasGithubUrl ? `
+                <div class="github-url">
+                    <i class="fab fa-github"></i> 
+                    <a href="${certificate.githubUrl}" target="_blank" style="color:#0366d6;">
+                        ${certificate.githubUrl}
+                    </a>
+                </div>
+                
+                <div class="qrcode-container">
+                    <div id="qrcode-${certificate.id}"></div>
+                    <p style="margin:10px 0;font-size:12px;color:#666;">QR Code يفتح صورة الشهادة مباشرة</p>
+                </div>
+            ` : `
+                <div class="upload-instructions" style="margin:15px 0;">
+                    <p><i class="fas fa-info-circle"></i> لتفعيل الباركود:</p>
+                    <ol style="text-align:right;margin-right:15px;font-size:12px;">
+                        <li>انقر "تحميل الصورة" واحفظها</li>
+                        <li>ارفع الصورة لـ GitHub</li>
+                        <li>انقر "إضافة رابط يدوي" وأضف الرابط</li>
+                    </ol>
+                </div>
+            `}
             
             <div class="item-actions">
-                <button class="btn btn-whatsapp" onclick="shareCertificate('${c.id}')">
+                <button class="btn btn-whatsapp" onclick="shareCertificate(${certificate.id})">
                     <i class="fab fa-whatsapp"></i> مشاركة
                 </button>
-                <button class="btn btn-success" onclick="downloadCertificateQRCode('${c.id}', '${c.name}')">
-                    <i class="fas fa-download"></i> حفظ QR
-                </button>
-                <button class="btn btn-primary" onclick="downloadCertificateImage('${c.id}', '${c.name}')">
+                ${hasGithubUrl ? `
+                    <button class="btn btn-success" onclick="downloadQRCode(${certificate.id}, '${certificate.name}')">
+                        <i class="fas fa-download"></i> حفظ QR
+                    </button>
+                ` : ''}
+                <button class="btn btn-primary" onclick="downloadCertificateImage(${certificate.id}, '${certificate.name}')">
                     <i class="fas fa-download"></i> تحميل الصورة
                 </button>
-                <button class="btn btn-danger" onclick="deleteCertificate(${c.id})">
+                ${!hasGithubUrl ? `
+                    <button class="btn btn-warning" onclick="setCertificateForManualLink(${certificate.id})">
+                        <i class="fas fa-link"></i> إضافة رابط
+                    </button>
+                ` : ''}
+                <button class="btn btn-danger" onclick="deleteCertificate(${certificate.id})">
                     <i class="fas fa-trash"></i> حذف
                 </button>
             </div>
         </div>
-    `).join('');
+        `;
+    }).join('');
     
     setTimeout(() => {
-        filteredCertificates.forEach(c => {
-            const certificateInfo = createCertificateInfo(c);
-            generateCertificateQRCode(c.id, certificateInfo);
+        filteredCertificates.forEach(certificate => {
+            if (certificate.githubUrl && certificate.githubUrl !== '') {
+                generateQRCode(`qrcode-${certificate.id}`, certificate.githubUrl);
+            }
         });
     }, 300);
 }
@@ -836,7 +758,7 @@ function searchLinks() {
                 <button class="btn btn-whatsapp" onclick="shareSingleLink('${l.title}', '${l.url}')">
                     <i class="fab fa-whatsapp"></i> مشاركة
                 </button>
-                <button class="btn btn-success" onclick="downloadQRCode('${l.id}', '${l.title}')">
+                <button class="btn btn-success" onclick="downloadLinkQRCode(${l.id}, '${l.title}')">
                     <i class="fas fa-download"></i> حفظ QR
                 </button>
                 <button class="btn btn-danger" onclick="deleteLink(${l.id})">
@@ -848,7 +770,7 @@ function searchLinks() {
     
     setTimeout(() => {
         filteredLinks.forEach(l => {
-            generateQRCode(l.id, l.url);
+            generateQRCode(`link-qrcode-${l.id}`, l.url);
         });
     }, 300);
 }
@@ -921,6 +843,62 @@ function downloadFile(content, fileName, type) {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
+}
+
+// دالة تحميل QR Code للروابط
+function downloadLinkQRCode(id, title) {
+    const container = document.getElementById(`link-qrcode-${id}`);
+    if (container && container.querySelector('canvas')) {
+        const canvas = container.querySelector('canvas');
+        const link = document.createElement('a');
+        link.download = `باركود_${title.replace(/\s+/g, '_')}.png`;
+        link.href = canvas.toDataURL();
+        link.click();
+    } else {
+        alert('QR Code غير جاهز للتحميل');
+    }
+}
+
+// عرض الروابط
+function renderLinks() {
+    const container = document.getElementById('linksContainer');
+    if (links.length === 0) {
+        container.innerHTML = '<div class="item-card" style="text-align:center;color:#666;"><i class="fas fa-link" style="font-size:3rem;margin-bottom:15px;"></i><h3>لا توجد روابط</h3><p>انقر على "إضافة رابط" لبدء الإدخال</p></div>';
+        return;
+    }
+    
+    container.innerHTML = links.map(l => `
+        <div class="item-card">
+            <h3 style="color:#2c3e50;margin-bottom:10px;">${l.title}</h3>
+            
+            <div class="link-url" title="${l.url}">
+                <i class="fas fa-link"></i> ${l.url.length > 40 ? l.url.substring(0, 40) + '...' : l.url}
+            </div>
+            
+            <div class="qrcode-container">
+                <div id="link-qrcode-${l.id}"></div>
+                <p style="margin:10px 0;font-size:12px;color:#666;">QR Code للمسح السريع</p>
+            </div>
+            
+            <div class="item-actions">
+                <button class="btn btn-whatsapp" onclick="shareSingleLink('${l.title}', '${l.url}')">
+                    <i class="fab fa-whatsapp"></i> مشاركة
+                </button>
+                <button class="btn btn-success" onclick="downloadLinkQRCode(${l.id}, '${l.title}')">
+                    <i class="fas fa-download"></i> حفظ QR
+                </button>
+                <button class="btn btn-danger" onclick="deleteLink(${l.id})">
+                    <i class="fas fa-trash"></i> حذف
+                </button>
+            </div>
+        </div>
+    `).join('');
+    
+    setTimeout(() => {
+        links.forEach(l => {
+            generateQRCode(`link-qrcode-${l.id}`, l.url);
+        });
+    }, 300);
 }
 </script>
 </body>
