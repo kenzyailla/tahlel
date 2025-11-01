@@ -82,6 +82,15 @@
             box-shadow: 0 2px 10px rgba(0,0,0,0.1);
         }
         
+        .qrcode-image {
+            border-radius: 8px;
+            border: 2px solid #e0e0e0;
+            background: white;
+            padding: 5px;
+            max-width: 150px;
+            max-height: 150px;
+        }
+        
         .item-actions{margin-top:15px;display:flex;gap:10px;justify-content:center;flex-wrap:wrap;}
         .search-box{flex:1;min-width:200px;padding:10px;border:1px solid #ccc;border-radius:8px;}
         footer{text-align:center;margin-top:40px;padding:20px;color:#7f8c8d;font-size:.9rem}
@@ -204,6 +213,15 @@
             color: #ef6c00;
         }
         
+        .url-shortener {
+            background: #e8f5e8;
+            border: 1px solid #4caf50;
+            border-radius: 8px;
+            padding: 10px;
+            margin: 10px 0;
+            font-size: 12px;
+        }
+        
         @media(max-width:768px){
             .items-container{grid-template-columns:1fr}
             .controls{flex-direction:column}
@@ -242,9 +260,9 @@
             <div class="instructions">
                 <h3><i class="fas fa-info-circle"></i> حول النظام:</h3>
                 <p style="text-align: right;">يمكنك إضافة روابط مفيدة وسيتم توليد باركود لها تلقائياً للمسح السريع. البيانات تحفظ في متصفحك.</p>
-                <p style="text-align: right; color: #d32f2f; margin-top: 10px;">
-                    <i class="fas fa-exclamation-triangle"></i>
-                    سيتم إصلاح الروابط القديمة تلقائياً عند التحميل
+                <p style="text-align: right; color: #2196f3; margin-top: 10px;">
+                    <i class="fas fa-qrcode"></i>
+                    الباركود يعمل بشكل دائم وبدون انتهاء صلاحية
                 </p>
             </div>
             
@@ -288,7 +306,7 @@ let qrCodeGenerationInProgress = false;
 // عند تحميل الصفحة
 document.addEventListener('DOMContentLoaded', () => {
     loadDataFromStorage();
-    fixOldLinks(); // إصلاح الروابط القديمة تلقائياً
+    fixOldLinks();
     renderLinks();
 });
 
@@ -322,7 +340,6 @@ function fixAllLinks() {
 
     let fixedCount = 0;
     
-    // إصلاح الروابط
     links.forEach(link => {
         const originalUrl = link.url;
         const fixedUrl = fixURL(link.url);
@@ -337,8 +354,6 @@ function fixAllLinks() {
     if (fixedCount > 0) {
         saveDataToStorage();
         showNotification(`تم إصلاح ${fixedCount} رابط، جاري إعادة إنشاء الباركود...`, 'info');
-        
-        // إعادة إنشاء جميع QR Codes بعد الإصلاح
         regenerateAllQRCodes();
     } else {
         showNotification('جميع الروابط صالحة بالفعل', 'info');
@@ -411,7 +426,7 @@ function showNotification(message, type = 'success') {
     }, 3000);
 }
 
-// إنشاء QR Code باستخدام API خارجي (بدون مكتبات)
+// إنشاء QR Code باستخدام خدمة موثوقة
 function generateQRCode(containerId, data) {
     const container = document.getElementById(containerId);
     if (!container) return;
@@ -427,40 +442,79 @@ function generateQRCode(containerId, data) {
         </div>
     `;
 
-    // استخدام خدمة QR Code خارجية موثوقة
+    // استخدام خدمة QR Code موثوقة بدون انتهاء صلاحية
     const qrSize = 150;
     const encodedData = encodeURIComponent(data);
-    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=${qrSize}x${qrSize}&data=${encodedData}&format=png&margin=10`;
+    
+    // استخدام multiple services as fallback
+    const services = [
+        `https://api.qrserver.com/v1/create-qr-code/?size=${qrSize}x${qrSize}&data=${encodedData}&format=png&margin=5&color=2196f3&bgcolor=ffffff`,
+        `https://quickchart.io/qr?text=${encodedData}&size=${qrSize}&margin=2&dark=2196f3&light=ffffff`,
+        `https://chart.googleapis.com/chart?chs=${qrSize}x${qrSize}&cht=qr&chl=${encodedData}&choe=UTF-8&chld=H|2`
+    ];
 
-    // إنشاء صورة الباركود
+    createQRWithFallback(containerId, services, 0);
+}
+
+// محاولة إنشاء QR Code مع خدمات بديلة
+function createQRWithFallback(containerId, services, index) {
+    if (index >= services.length) {
+        // جميع الخدمات فشلت
+        const container = document.getElementById(containerId);
+        container.innerHTML = `
+            <div style="text-align:center; color:#666;">
+                <i class="fas fa-exclamation-triangle" style="font-size:2rem; margin-bottom:10px; display:block;"></i>
+                <small>تعذر إنشاء الباركود</small>
+                <br>
+                <button onclick="retryQRCode('${containerId}', '${services[0].split('data=')[1]?.split('&')[0]}')" 
+                        class="btn btn-warning" style="margin-top:10px; padding:5px 10px; font-size:12px;">
+                    <i class="fas fa-redo"></i> إعادة المحاولة
+                </button>
+            </div>
+        `;
+        return;
+    }
+
     const img = new Image();
+    img.className = 'qrcode-image';
+    
     img.onload = function() {
-        container.innerHTML = '';
-        container.appendChild(img);
+        const container = document.getElementById(containerId);
+        if (container) {
+            container.innerHTML = '';
+            container.appendChild(img);
+        }
     };
     
     img.onerror = function() {
-        // إذا فشلت الخدمة الأولى، نستخدم خدمة بديلة
-        const fallbackUrl = `https://quickchart.io/qr?text=${encodedData}&size=${qrSize}`;
-        const fallbackImg = new Image();
-        fallbackImg.onload = function() {
-            container.innerHTML = '';
-            container.appendChild(fallbackImg);
-        };
-        fallbackImg.onerror = function() {
-            container.innerHTML = `
-                <div style="text-align:center; color:#666;">
-                    <i class="fas fa-exclamation-triangle" style="font-size:2rem; margin-bottom:10px; display:block;"></i>
-                    <small>تعذر إنشاء الباركود</small>
-                    <br>
-                    <small style="font-size:10px;">${data}</small>
-                </div>
-            `;
-        };
-        fallbackImg.src = fallbackUrl;
+        // جرب الخدمة التالية
+        createQRWithFallback(containerId, services, index + 1);
     };
     
-    img.src = qrUrl;
+    img.src = services[index];
+}
+
+// إعادة محاولة إنشاء QR Code
+function retryQRCode(containerId, encodedData) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    
+    container.innerHTML = `
+        <div class="qrcode-loading">
+            <i class="fas fa-spinner fa-spin" style="font-size: 24px; margin-bottom: 10px; display: block;"></i>
+            <span>جاري إعادة إنشاء الباركود...</span>
+        </div>
+    `;
+    
+    setTimeout(() => {
+        const qrSize = 150;
+        const services = [
+            `https://api.qrserver.com/v1/create-qr-code/?size=${qrSize}x${qrSize}&data=${encodedData}&format=png&margin=5&color=2196f3&bgcolor=ffffff`,
+            `https://quickchart.io/qr?text=${encodedData}&size=${qrSize}&margin=2&dark=2196f3&light=ffffff`
+        ];
+        
+        createQRWithFallback(containerId, services, 0);
+    }, 1000);
 }
 
 // إعادة إنشاء جميع QR Codes
@@ -477,22 +531,19 @@ function regenerateAllQRCodes() {
         const fixedUrl = fixURL(link.url);
         const containerId = `link-qrcode-${link.id}`;
         
-        // تأخير تدريجي لمنع التحميل الزائد
         setTimeout(() => {
             generateQRCode(containerId, fixedUrl);
             completed++;
             
-            // عند اكتمال جميع الباركود
             if (completed === total) {
                 qrCodeGenerationInProgress = false;
                 setTimeout(() => {
                     showNotification('تم إعادة إنشاء جميع الباركود بنجاح ✅');
                 }, 500);
             }
-        }, index * 300); // 300ms بين كل باركود
+        }, index * 800); // زيادة التأخير لمنع التحميل الزائد
     });
     
-    // إذا لم تكن هناك روابط
     if (total === 0) {
         qrCodeGenerationInProgress = false;
     }
@@ -590,15 +641,14 @@ function renderLinks() {
         </div>
     `}).join('');
     
-    // توليد QR Codes بعد عرض العناصر
     setTimeout(() => {
         regenerateAllQRCodes();
-    }, 500);
+    }, 1000);
 }
 
 // تحميل QR Code كصورة
 function downloadQRCode(id, title) {
-    const container = document.getElementById(`link-qrcode-${link.id}`);
+    const container = document.getElementById(`link-qrcode-${id}`);
     const img = container.querySelector('img');
     
     if (img && img.src) {
@@ -758,7 +808,7 @@ function searchLinks() {
             const fixedUrl = fixURL(link.url);
             generateQRCode(`link-qrcode-${link.id}`, fixedUrl);
         });
-    }, 300);
+    }, 500);
 }
 
 // دوال التصدير والاستيراد
