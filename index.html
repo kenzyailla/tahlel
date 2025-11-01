@@ -64,9 +64,29 @@
             background: #f8f9fa;
             border-radius: 10px;
             border: 2px dashed #ddd;
+            position: relative;
+            min-height: 180px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
-        .qrcode-container div {
-            margin: 0 auto;
+        
+        .qrcode-wrapper {
+            position: relative;
+            display: inline-block;
+        }
+        
+        .qrcode-loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(255,255,255,0.95);
+            padding: 15px;
+            border-radius: 8px;
+            z-index: 10;
+            text-align: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
         }
         
         .item-actions{margin-top:15px;display:flex;gap:10px;justify-content:center;flex-wrap:wrap;}
@@ -216,17 +236,6 @@
             color: #ef6c00;
         }
         
-        .fix-link-btn {
-            background: #ff9800;
-            color: white;
-            border: none;
-            padding: 5px 10px;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 12px;
-            margin-top: 5px;
-        }
-        
         @media(max-width:768px){
             .items-container{grid-template-columns:1fr}
             .controls{flex-direction:column}
@@ -306,6 +315,7 @@
 
 <script>
 let links = [];
+let activeQRCodes = new Map(); // لتخزين وإدارة نسخ QR Code النشطة
 
 // عند تحميل الصفحة
 document.addEventListener('DOMContentLoaded', () => {
@@ -352,8 +362,9 @@ function fixAllLinks() {
     
     if (fixedCount > 0) {
         saveDataToStorage();
-        renderLinks();
-        showNotification(`تم إصلاح ${fixedCount} رابط بنجاح`);
+        // إعادة إنشاء جميع QR Codes بعد الإصلاح
+        regenerateAllQRCodes();
+        showNotification(`تم إصلاح ${fixedCount} رابط وإعادة إنشاء الباركود`);
     } else {
         showNotification('جميع الروابط صالحة بالفعل', 'info');
     }
@@ -431,40 +442,101 @@ function showNotification(message, type = 'success') {
     }, 3000);
 }
 
-// توليد QR Code
+// مسح QR Code القديم بشكل آمن
+function clearQRCode(containerId) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    
+    // مسح جميع المحتويات القديمة
+    container.innerHTML = '';
+    
+    // إزالة أي نسخة مخزنة من QR Code
+    if (activeQRCodes.has(containerId)) {
+        activeQRCodes.delete(containerId);
+    }
+}
+
+// توليد QR Code جديد
 function generateQRCode(containerId, data) {
     const container = document.getElementById(containerId);
     if (!container) return;
 
     try {
-        // مسح المحتوى القديم أولاً
-        container.innerHTML = '';
+        // مسح الباركود القديم أولاً
+        clearQRCode(containerId);
         
-        const qrCode = new QRCodeStyling({
-            width: 150,
-            height: 150,
-            data: data,
-            dotsOptions: {
-                color: "#2196f3",
-                type: "rounded"
-            },
-            backgroundOptions: {
-                color: "#ffffff",
-            },
-            imageOptions: {
-                crossOrigin: "anonymous",
-                margin: 5
-            }
-        });
+        // إضافة مؤشر تحميل
+        container.innerHTML = `
+            <div class="qrcode-loading">
+                <i class="fas fa-spinner fa-spin" style="font-size: 24px; margin-bottom: 10px; display: block;"></i>
+                <span>جاري إنشاء الباركود...</span>
+            </div>
+        `;
         
-        qrCode.append(container);
+        // إنشاء QR Code جديد بعد تأخير بسيط
+        setTimeout(() => {
+            // التأكد من أن الحاوية لا تزال موجودة
+            if (!document.getElementById(containerId)) return;
+            
+            // مسح مؤشر التحميل
+            container.innerHTML = '';
+            
+            const qrCode = new QRCodeStyling({
+                width: 150,
+                height: 150,
+                data: data,
+                dotsOptions: {
+                    color: "#2196f3",
+                    type: "rounded"
+                },
+                backgroundOptions: {
+                    color: "#ffffff",
+                },
+                imageOptions: {
+                    crossOrigin: "anonymous",
+                    margin: 5
+                }
+            });
+            
+            // إنشاء QR Code
+            qrCode.append(container);
+            
+            // حفظ المرجع للاستخدام المستقبلي
+            activeQRCodes.set(containerId, qrCode);
+            
+        }, 100);
+        
     } catch (error) {
         console.error('QR Code error:', error);
-        container.innerHTML = `<div style="padding:20px;color:#666;background:#f5f5f5;border-radius:5px;">
-            <i class="fas fa-qrcode" style="font-size:2rem;"></i><br>
-            <small>QR Code غير متاح</small>
-        </div>`;
+        container.innerHTML = `
+            <div style="text-align:center; color:#666;">
+                <i class="fas fa-exclamation-triangle" style="font-size:2rem; margin-bottom:10px; display:block;"></i>
+                <small>خطأ في إنشاء الباركود</small>
+                <br>
+                <small style="font-size:10px;">${data}</small>
+            </div>
+        `;
     }
+}
+
+// إعادة إنشاء جميع QR Codes
+function regenerateAllQRCodes() {
+    showNotification('جاري إعادة إنشاء جميع الباركود...', 'info');
+    
+    links.forEach((link, index) => {
+        const fixedUrl = fixURL(link.url);
+        const containerId = `link-qrcode-${link.id}`;
+        
+        // إعادة إنشاء QR Code بعد تأخير تدريجي لمنع التحميل الزائد
+        setTimeout(() => {
+            generateQRCode(containerId, fixedUrl);
+        }, index * 200); // تأخير 200 مللي ثانية بين كل باركود
+    });
+    
+    // إشعار بعد اكتمال العملية
+    setTimeout(() => {
+        showNotification('تم إعادة إنشاء جميع الباركود بنجاح');
+    }, (links.length * 200) + 500);
 }
 
 // فتح الرابط في نافذة جديدة
@@ -541,7 +613,6 @@ function renderLinks() {
             <!-- باركود الرابط -->
             <div class="qrcode-container">
                 <div id="link-qrcode-${link.id}"></div>
-                <p style="margin:10px 0;font-size:12px;color:#666;">QR Code للمسح السريع</p>
             </div>
             
             <div class="item-actions">
@@ -563,11 +634,8 @@ function renderLinks() {
     
     // توليد QR Codes بعد عرض العناصر
     setTimeout(() => {
-        links.forEach(link => {
-            const fixedUrl = fixURL(link.url);
-            generateQRCode(`link-qrcode-${link.id}`, fixedUrl);
-        });
-    }, 300);
+        regenerateAllQRCodes();
+    }, 500);
 }
 
 // تحميل QR Code كصورة
@@ -662,6 +730,10 @@ function addNewLink() {
 
 function deleteLink(id) {
     if (confirm('هل تريد حذف هذا الرابط؟')) {
+        // مسح الباركود المرتبط قبل الحذف
+        const containerId = `link-qrcode-${id}`;
+        clearQRCode(containerId);
+        
         links = links.filter(l => l.id !== id);
         saveDataToStorage();
         renderLinks();
@@ -709,7 +781,6 @@ function searchLinks() {
             
             <div class="qrcode-container">
                 <div id="link-qrcode-${link.id}"></div>
-                <p style="margin:10px 0;font-size:12px;color:#666;">QR Code للمسح السريع</p>
             </div>
             
             <div class="item-actions">
